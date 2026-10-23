@@ -315,6 +315,11 @@ def detect_wash_trading(
       2. Shared-IP/Device Counterparty Wash Trades (distinct traders sharing IP with near-zero net inventory change or repeated volume).
       3. 2-Hop and 3-Hop Collusive Wash-Trading Rings (A -> B -> A or A -> B -> C -> A)
          where gross traded volume is high but net inventory change is < 5% of gross volume.
+
+    A balanced loop of trades between unrelated accounts happens by chance in any busy book, so a
+    ring is only reported with some evidence of prearrangement: two members sharing an IP address,
+    every leg traded at least twice in the window (repeated round trips), or every leg of exactly
+    the same size (matched orders).
     """
     if not fills:
         return []
@@ -417,6 +422,14 @@ def detect_wash_trading(
                         if net_ratio >= max_net_to_gross_ratio:
                             continue
 
+                        ips = sorted(set(trader_ip[t] for t in ring_traders))
+                        shared_ip = len(ips) < len(ring_traders)
+                        legs = ((a, b), (b, c), (c, a))
+                        repeated = min(len(edge_fills[e]) for e in legs) >= 2
+                        matched_sizes = len({edge_vol[e] for e in legs}) == 1
+                        if not (shared_ip or repeated or matched_sizes):
+                            continue
+
                         fids_set = {f.fill_id for f in c_fills}
                         if any(fids_set.issubset(prev) or prev.issubset(fids_set) for prev in flagged_fill_sets):
                             continue
@@ -427,8 +440,6 @@ def detect_wash_trading(
                         seen_ring_keys.add(ring_key)
                         flagged_fill_sets.append(fids_set)
 
-                        ips = sorted(set(trader_ip[t] for t in ring_traders))
-                        shared_ip = len(ips) < len(ring_traders)
                         conf = min(0.99, 0.85 + 0.10 * (1.0 - net_ratio / max_net_to_gross_ratio) + (0.04 if shared_ip else 0.0))
 
                         alerts.append(
@@ -467,6 +478,9 @@ def detect_wash_trading(
                     net_change = abs(v_ab - v_ba)
                     net_ratio = net_change / float(gross_vol)
                     if net_ratio >= max_net_to_gross_ratio and not same_ip:
+                        continue
+                    repeated = min(len(edge_fills.get((a, b), [])), len(edge_fills.get((b, a), []))) >= 2
+                    if not (same_ip or repeated or v_ab == v_ba):
                         continue
 
                     fids_set = {f.fill_id for f in c_fills}
