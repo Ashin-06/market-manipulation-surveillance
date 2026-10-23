@@ -10,14 +10,13 @@ from fastapi.testclient import TestClient
 from mktsurv.api import app
 from mktsurv.bench import format_benchmark_table, run_benchmark
 from mktsurv.detectors import (
-    detect_marking_the_close,
     detect_spoofing_layering,
     detect_wash_trading,
     run_surveillance,
 )
 from mktsurv.lob import LimitOrderBook, OrderEvent
 from mktsurv.simulate import generate_market_session
-from mktsurv.vpin import compute_vpin, detect_front_running
+from mktsurv.vpin import compute_vpin
 
 
 def test_lob_price_time_priority_and_microstructure_metrics() -> None:
