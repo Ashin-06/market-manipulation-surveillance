@@ -6,6 +6,7 @@ against a Naive Regulatory Threshold Baseline (`Order-to-Trade Ratio > 15` / Can
 from __future__ import annotations
 
 import json
+from collections import Counter
 from dataclasses import asdict, dataclass
 from typing import Dict, List, Set
 
@@ -150,6 +151,84 @@ def run_benchmark(seed: int = 42) -> Dict[str, object]:
             "total_alerts": len(report.unified_alerts),
         },
     }
+
+
+def run_sweep(sessions: int = 200, inclusion_prob: float = 0.6, first_seed: int = 0) -> Dict[str, object]:
+    """
+    Trader-level metrics summed over many simulated sessions. Each seed changes the price
+    level, timing, order sizes and slice counts, and each manipulation episode is injected with
+    probability `inclusion_prob`, so some sessions lack a pattern entirely. One session (the
+    single-seed benchmark) is too small a sample to say much on its own.
+    """
+    counts = {"mktsurv": Counter(), "naive": Counter()}
+    ep_hit: Counter = Counter()
+    ep_total: Counter = Counter()
+    for seed in range(first_seed, first_seed + sessions):
+        scenario = generate_market_session(symbol="ACME", seed=seed, episode_inclusion_prob=inclusion_prob)
+        _, report = run_surveillance(
+            scenario.events,
+            symbol=scenario.symbol,
+            vpin_bucket_volume=500,
+            session_end_ts_ms=scenario.session_end_ts_ms,
+        )
+        positives = set(scenario.manipulative_traders)
+        negatives = set(scenario.benign_traders)
+        hard = set(scenario.hard_negative_traders)
+        for name, flagged in (
+            ("mktsurv", set(report.flagged_traders)),
+            ("naive", set(report.naive_baseline_flagged_traders)),
+        ):
+            c = counts[name]
+            c["tp"] += len(flagged & positives)
+            c["fp"] += len(flagged & negatives)
+            c["fn"] += len(positives - flagged)
+            c["hard_fp"] += len(flagged & hard)
+            c["hard_total"] += len(hard)
+        for ep in scenario.episodes:
+            if ep.is_manipulation:
+                ep_total[ep.episode_id] += 1
+                ep_hit[ep.episode_id] += any(
+                    set(ep.traders) & set(a.involved_traders) and a.pattern == ep.pattern
+                    for a in report.unified_alerts
+                )
+
+    def summarise(c: Counter) -> Dict[str, float]:
+        precision = c["tp"] / (c["tp"] + c["fp"]) if c["tp"] + c["fp"] else 0.0
+        recall = c["tp"] / (c["tp"] + c["fn"]) if c["tp"] + c["fn"] else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+        return {
+            "true_positives": c["tp"],
+            "false_positives": c["fp"],
+            "false_negatives": c["fn"],
+            "precision": round(precision, 4),
+            "recall": round(recall, 4),
+            "f1_score": round(f1, 4),
+            "hard_negative_fp_rate": round(c["hard_fp"] / max(1, c["hard_total"]), 4),
+        }
+
+    return {
+        "sessions": sessions,
+        "inclusion_prob": inclusion_prob,
+        "mktsurv": summarise(counts["mktsurv"]),
+        "naive_baseline": summarise(counts["naive"]),
+        "episodes_detected": {k: f"{ep_hit[k]}/{ep_total[k]}" for k in sorted(ep_total)},
+    }
+
+
+def format_sweep(sweep: Dict[str, object]) -> str:
+    m = sweep["mktsurv"]  # type: ignore[index]
+    n = sweep["naive_baseline"]  # type: ignore[index]
+    lines = [
+        f"  {sweep['sessions']} sessions, each episode injected with p={sweep['inclusion_prob']}",
+        f"  {'':<26} {'precision':>9} {'recall':>7} {'F1':>6} {'TP':>5} {'FP':>5} {'FN':>5} {'hard-neg FP':>11}",
+    ]
+    for label, s in (("mktsurv", m), ("naive OTR > 15", n)):
+        lines.append(
+            f"  {label:<26} {s['precision']*100:>8.1f}% {s['recall']*100:>6.1f}% {s['f1_score']*100:>5.1f}% "
+            f"{s['true_positives']:>5} {s['false_positives']:>5} {s['false_negatives']:>5} {s['hard_negative_fp_rate']*100:>10.1f}%"
+        )
+    lines.append("  episodes detected: " + ", ".join(f"{k} {v}" for k, v in sweep["episodes_detected"].items()))  # type: ignore[union-attr]
+    return "\n".join(lines)
 
 
 def format_benchmark_table(bench: Dict[str, object]) -> str:

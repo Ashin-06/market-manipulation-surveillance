@@ -273,3 +273,12 @@ def test_lob_rejects_events_it_would_misprocess() -> None:
         with pytest.raises(ValueError):
             lob.process_event(ev)
     assert lob.fills == [] and list(lob.asks) == [100.0]
+
+
+def test_multi_session_sweep_has_no_false_positives() -> None:
+    from mktsurv.bench import run_sweep
+
+    sweep = run_sweep(sessions=20, inclusion_prob=0.6)
+    assert sweep["mktsurv"]["false_positives"] == 0
+    assert sweep["mktsurv"]["recall"] == 1.0
+    assert sweep["naive_baseline"]["hard_negative_fp_rate"] > 0.3
