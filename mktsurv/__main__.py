@@ -2,6 +2,7 @@
 CLI Entrypoint for `mktsurv`:
   - `python -m mktsurv bench`
   - `python -m mktsurv serve --port 8015`
+  - `python -m mktsurv realdata --data DIR`   (LOBSTER sample files -> results/real_data.json)
 """
 
 from __future__ import annotations
@@ -34,8 +35,19 @@ def main(argv: Optional[List[str]] = None) -> int:
     serve_parser.add_argument("--host", type=str, default="127.0.0.1", help="Bind host")
     serve_parser.add_argument("--port", type=int, default=8015, help="Bind port (default 8015)")
 
+    real_parser = sub.add_parser("realdata", help="Count false alerts on real Nasdaq order flow (LOBSTER samples)")
+    real_parser.add_argument("--data", required=True, help="Folder with LOBSTER *_message_10.csv and *_orderbook_10.csv files")
+    real_parser.add_argument("--traders", type=int, nargs="+", default=[10, 50, 200], help="Pseudo-trader counts")
+    real_parser.add_argument("--out", default="results/real_data.json")
+
     args = parser.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+    if args.command == "realdata":
+        from .realdata import main as realdata
+
+        realdata(args.data, args.traders, args.out)
+        return 0
 
     if args.command == "serve":
         if args.host not in ("127.0.0.1", "localhost", "::1") and not os.environ.get("MKTSURV_API_KEY"):
