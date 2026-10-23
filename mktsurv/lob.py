@@ -4,6 +4,7 @@ Deterministic Price-Time Priority Level-3 Limit Order Book (LOB) Matching Engine
 
 from __future__ import annotations
 
+import math
 from collections import deque
 from dataclasses import asdict, dataclass, field
 from typing import Deque, Dict, Iterable, List, Optional, Tuple
@@ -413,10 +414,34 @@ class LimitOrderBook:
         book_side[price].append(resting)
         self.order_map[resting.order_id] = resting
 
+    def _validate(self, event: OrderEvent) -> None:
+        """
+        Reject events the book would otherwise mis-process: a NaN limit price compares false
+        against every level and so trades like a market order, and a reused order ID leaves
+        the earlier order orphaned on the book where it can never be cancelled.
+        """
+        etype = event.event_type.upper()
+        if etype not in ("ADD", "CANCEL", "MODIFY", "MARKET"):
+            raise ValueError(f"Unknown event_type {event.event_type!r} for order {event.order_id}")
+        if event.side.upper() not in ("BUY", "SELL"):
+            raise ValueError(f"Unknown side {event.side!r} for order {event.order_id}")
+        if not math.isfinite(event.price) or event.price < 0:
+            raise ValueError(f"Price must be a finite non-negative number (order {event.order_id})")
+        if event.qty < 0:
+            raise ValueError(f"Quantity cannot be negative (order {event.order_id})")
+        if etype in ("ADD", "MARKET"):
+            if event.qty == 0:
+                raise ValueError(f"{etype} needs a positive quantity (order {event.order_id})")
+            if etype == "ADD" and event.price <= 0:
+                raise ValueError(f"ADD needs a positive limit price (order {event.order_id})")
+            if event.order_id in self.lifecycles:
+                raise ValueError(f"Duplicate order_id {event.order_id}")
+
     def process_event(
         self, event: OrderEvent, record_snapshot: bool = False
     ) -> List[TradeFill]:
         """Process a single Level-3 OrderEvent and return any resulting TradeFills."""
+        self._validate(event)
         self.events.append(event)
         etype = event.event_type.upper()
         side = event.side.upper()

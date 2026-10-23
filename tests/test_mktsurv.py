@@ -257,3 +257,19 @@ def test_full_wash_ring_replaces_an_earlier_partial_alert() -> None:
     assert {"RING_A", "RING_B", "RING_C"} <= set(report.flagged_traders)
     ids = [a.alert_id for a in report.wash_trading_alerts]
     assert len(ids) == len(set(ids))
+
+
+def test_lob_rejects_events_it_would_misprocess() -> None:
+    lob = LimitOrderBook(symbol="BAD")
+    lob.process_event(OrderEvent("ADD", "S1", "A", "a", "1", "SELL", 100.0, 100, 1))
+    bad = [
+        OrderEvent("ADD", "B1", "B", "b", "2", "BUY", float("nan"), 100, 2),  # used to fill like a market order
+        OrderEvent("ADD", "S1", "C", "c", "3", "SELL", 102.0, 100, 3),  # reused order ID
+        OrderEvent("ADD", "N1", "B", "b", "2", "BUY", 99.0, -50, 4),
+        OrderEvent("BOGUS", "X1", "B", "b", "2", "BUY", 99.0, 10, 5),
+        OrderEvent("ADD", "Z1", "B", "b", "2", "SIDEWAYS", 99.0, 10, 6),
+    ]
+    for ev in bad:
+        with pytest.raises(ValueError):
+            lob.process_event(ev)
+    assert lob.fills == [] and list(lob.asks) == [100.0]
