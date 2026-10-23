@@ -1,53 +1,50 @@
-# Project 15 — Level-3 Market Manipulation Surveillance Engine (`mktsurv`)
+# Market Manipulation Surveillance (`mktsurv`)
 
-A deterministic **Level-3 Limit Order Book (LOB) Microstructure Surveillance Engine** that reconstructs full order queues, order lifecycles, and matched trade graphs to detect **Spoofing**, **Multi-Level Layering**, **Collusive Wash-Trading Rings**, **Marking-the-Close**, and **Informed Order-Flow Toxicity (VPIN) / Pre-Block Front-Running** while eliminating false positives on legitimate Market Makers and institutional TWAP/Iceberg execution algorithms.
+This replays level-3 order events (every add, cancel, modify and market order, with trader, account and IP) through a price-time-priority matching engine. Rule-based detectors then run over the order lifecycles and fills, looking for spoofing and layering, wash trading, marking the close, and front-running around large trades. The comparison baseline is the classic order-to-trade-ratio rule (OTR > 15 or cancel rate > 85%), which flags busy market makers and execution algorithms.
 
----
+All results below come from a built-in simulator. The detectors have not been run on real market data.
 
-## Architecture
+## What it does
 
-1. **`mktsurv/lob.py` — Deterministic Level-3 Limit Order Book Matching Engine**
-   - Processes `ADD`, `CANCEL`, `MODIFY`, and `MARKET` events with strict price-time (FIFO) priority.
-   - Tracks bid/ask depth queues, mid-price, volume-weighted micro-price, spread (bps), and Order Book Imbalance:
-     $$\text{OBI} = \frac{V_{\text{bid}} - V_{\text{ask}}}{V_{\text{bid}} + V_{\text{ask}}}$$
-   - Emits `TradeFill` execution records and `OrderLifecycle` metrics (`time_to_cancel_ms`, `distance_from_touch_bps`, `fill_ratio`, `cancel_ratio`, `book_imbalance_at_placement`).
+**Order book** (`lob.py`). A single-instrument book with price-time priority. It tracks each order's fills, cancels, time-to-cancel and distance from the touch, plus the book imbalance (OBI) when the order was placed. It reports mid, micro-price and spread. Events with unknown types or sides, non-finite or negative prices, non-positive quantities or reused order IDs are rejected. (A NaN-priced limit order used to trade like a market order.)
 
-2. **`mktsurv/detectors.py` & `mktsurv/vpin.py` — 4 Microstructure Manipulation Detectors**
-   - **Spoofing & Multi-Level Layering (`detect_spoofing_layering`)**: Requires the joint microstructure signature:
-     1. Large non-bona-fide resting volume across 1–4+ price levels on `spoof_side` creating $> 0.55$ directional book imbalance,
-     2. Bona-fide trade execution by the *same* trader on the *opposite* side (`exec_side`) while the spoof orders are resting, and
-     3. Rapid cancellation ($< 2000\text{ ms}$) of $> 80\%$ of the `spoof_side` orders immediately after the opposite execution.
-   - **Self-Trade & Collusive Wash-Trading Ring Detector (`detect_wash_trading`)**: Builds a sliding-window directed volume graph over `TradeFill`s to flag direct self-trades, shared-IP counterparty trades, and 2-hop / 3-hop circular wash rings ($A \to B \to C \to A$) where gross volume is high but net inventory change is $< 5\%$ of gross volume.
-   - **Marking-the-Close / Closing-Bell Ramp Detector (`detect_marking_the_close`)**: Flags aggressive directional sweeps in the final 120 seconds of trading that represent $> 40\%$ of closing-window volume and push the closing price $> 35\text{ bps}$ away from the 15-minute VWAP.
-   - **VPIN Order-Flow Toxicity & Front-Running Detector (`compute_vpin`, `detect_front_running`)**: Computes Volume-Synchronized Probability of Informed Trading (Easley, López de Prado, O'Hara) across equal-volume buckets (supporting both Level-3 aggressor classification and Bulk Volume Classification) and detects pre-block-trade front-running ahead of large institutional sweeps.
+**Detectors** (`detectors.py`, `vpin.py`). All are threshold rules with hand-set parameters.
+- *Spoofing / layering.* A trader rests at least 500 shares on one side while book imbalance toward that side exceeds 0.55, trades on the other side, then cancels more than 80% of the resting orders within 2 seconds of that trade. Two or more price levels count as layering.
+- *Wash trading.* Covers self-trades (same trader or account on both sides) and 2- and 3-party loops within 60 seconds whose net position change is under 5% of gross. A loop is reported only with evidence of prearrangement: a shared IP, every leg traded at least twice, or identically sized legs. Without that rule, chance loops among unrelated retail traders were flagged 111 times in 200 sessions.
+- *Marking the close.* One trader's aggressive orders make up over 40% of volume in the last 120 seconds and move the close more than 35 bps from the preceding 15-minute VWAP.
+- *Front-running.* A trader builds a position in the 15 seconds before a block of at least 1,200 shares from someone else, then unwinds at least 60% of it into the block at an edge of 8 bps or more. VPIN (Easley, López de Prado and O'Hara) is reported alongside the alert but is not part of the rule.
 
-3. **`mktsurv/simulate.py` & `mktsurv/bench.py` — L3 Simulator & Regulatory Benchmark**
-   - Simulates a 15-minute Level-3 session with background market makers (`MM_01`, `MM_02`), retail noise traders, **hard-negative legitimate institutional TWAP (`INST_TWAP_01`) and Iceberg (`INST_ICEBERG_01`) algorithms**, and 6 injected manipulation episodes.
-   - Compares `mktsurv` against a naive regulatory threshold (`Order-to-Trade Ratio > 15` / Cancel Rate $> 85\%$).
+**Simulator** (`simulate.py`). This is a 15-minute session with two market makers, six retail traders, and two legitimate institutional algos as hard negatives: a TWAP and an iceberg, both with high cancel rates. Up to six manipulation episodes are injected, one per detector pattern (spoof, layer, self-trade, three-account ring, front-run, close ramp). Each seed changes price level, timing, order sizes, slice counts and cancel latencies, and each episode can be left out at random. Detectors never see trader names or tags; those are used only for scoring.
 
----
+## Results
 
-## Benchmark Results (`python -m mktsurv bench`)
+`python -m mktsurv bench` scores one session (seed 42), then a sweep of 200 sessions with each episode injected at p = 0.6. Scoring is per trader.
 
-| Metric | `mktsurv` (L3 Microstructure Engine) | Naive Regulatory Baseline (`OTR > 15`) |
-| :--- | :---: | :---: |
-| **Precision** | **100.00%** | 33.33% |
-| **Recall** | **100.00%** | 25.00% |
-| **F1 Score** | **100.00%** (`> 95%`) | 28.57% |
-| **False Positive Rate on Legitimate MMs & TWAP/Iceberg** | **0.00%** (`0 / 4`) | 100.00% (`4 / 4`) |
-| **Episode-Level Detection Recall** | **100.00%** (`6 / 6`) | 33.33% (`2 / 6`) |
+| 200 sessions | Precision | Recall | False positives | Hard negatives flagged |
+|---|---|---|---|---|
+| mktsurv | 100% | 100% (952/952) | 0 | 0% |
+| OTR > 15 / cancel > 85% | 0% | 0% | 478 | 59.8% |
 
----
+Every injected episode was detected: spoof 122/122, layer 112/112, self-trade 121/121, ring 122/122, front-run 114/114, close ramp 117/117. Separate sweeps with every episode always included (p = 1.0) and with none (p = 0.0) also produced no false positives and no misses. The seed-42 session alone gives 8 true positives, 0 false positives, and 2 of 4 hard negatives flagged by the OTR rule.
 
-## Quickstart & CLI
+**What this shows and what it doesn't.** Every session reuses the same six episode templates, shifted and rescaled, and the thresholds were set with those templates and these hard negatives in view. The 100% therefore means the detectors survive the simulator's variation in timing, size and price level. It says nothing about manipulation strategies they weren't written for, or about the false-positive rate on real order flow. Running them over real level-3 data (for example LOBSTER's Nasdaq samples, which carry no manipulation labels) would at least measure the false alerts on genuine traffic.
+
+## Run it
 
 ```bash
-# Run the test suite
-python -m pytest -q
-
-# Run the Level-3 surveillance benchmark
-python -m mktsurv bench
-
-# Launch the FastAPI surveillance server & interactive console on port 8015
-python -m mktsurv serve --port 8015
+pip install -r requirements.txt
+python -m pytest -q                    # 11 tests
+python -m mktsurv bench                # single session + 200-session sweep
+python -m mktsurv serve --port 8015    # API + console at http://127.0.0.1:8015
 ```
+
+Endpoints: `POST /surveil` (your own events, up to 5,000, or the simulated session), `GET /episodes`, `GET /episodes/{id}`, `GET /bench`, `GET /health`. Set `MKTSURV_API_KEY` to require it in the `X-API-Key` header (the console has a field for it). Without the key the server runs open, and `serve` refuses to bind a non-loopback address.
+
+## Limits
+
+- **Simulated data only.** There are no labelled real cases, and no measurement on real order flow.
+- **Rules, not models.** Every threshold is a hand-set constant. Real surveillance would tune them per instrument and venue and review the alerts by hand.
+- **One instrument, one venue.** There is no cross-venue or cross-product view; spoofing across related instruments and wash trades through other venues are invisible. Linkage between accounts is only the IP field; real wash-trade detection needs beneficial-ownership data.
+- **Simplified matching engine.** There are no auctions, hidden or iceberg order types, self-trade prevention or tick-size checks. Every query rescans the book's levels, which is fine for thousands of events but nowhere near exchange volumes.
+- **Front-running needs the victim's trades in the same feed** and only looks at one block at a time.
+- **No deployment story**: no TLS, rate limiting, persistence, case management or audit trail.
