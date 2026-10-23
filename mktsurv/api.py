@@ -8,15 +8,21 @@ Endpoints:
   - GET  /episodes       -> List all simulated episodes + detected alerts + VPIN series
   - GET  /episodes/{id}  -> Detailed L3 event trace, lifecycles, fills, and alerts for an episode
   - GET  /bench          -> Benchmark comparison (`mktsurv` vs Naive Regulatory OTR > 15)
+
+Set MKTSURV_API_KEY to require it in the X-API-Key header on every endpoint except / and /health
+(unset = open, for local use; `python -m mktsurv serve` refuses a non-loopback host without it).
 """
 
 from __future__ import annotations
 
+import hmac
+import os
+from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from .bench import run_benchmark
@@ -35,28 +41,48 @@ app = FastAPI(
 )
 
 WEB_CONSOLE_PATH = Path(__file__).resolve().parent.parent / "web" / "console.html"
+API_KEY = os.environ.get("MKTSURV_API_KEY")
+MAX_BODY_BYTES = 2_000_000
+# The book rescans its levels on every event and the wash detector is quadratic in fills,
+# so a single request is capped well below what a real session would hold.
+MAX_EVENTS = 5_000
+
+
+def require_key(x_api_key: str | None = Header(default=None)) -> None:
+    if API_KEY and not hmac.compare_digest(x_api_key or "", API_KEY):
+        raise HTTPException(401, "missing or wrong X-API-Key")
+
+
+@app.middleware("http")
+async def limit_body(request: Request, call_next):
+    if request.method == "POST":
+        length = request.headers.get("content-length", "")
+        if not length.isdigit() or int(length) > MAX_BODY_BYTES:
+            return JSONResponse({"detail": "body missing Content-Length or over 2 MB"}, status_code=413)
+    return await call_next(request)
 
 
 class OrderEventPayload(BaseModel):
-    event_type: str = Field(..., description="ADD, CANCEL, MODIFY, or MARKET")
-    order_id: str
-    trader_id: str
-    account_id: str = "ACCT-DEFAULT"
-    ip_address: str = "127.0.0.1"
-    side: str = Field(..., description="BUY or SELL")
-    price: float = 0.0
-    qty: int = 100
-    timestamp_ms: int
-    tag: Optional[str] = None
+    event_type: Literal["ADD", "CANCEL", "MODIFY", "MARKET"]
+    order_id: str = Field(..., min_length=1, max_length=64)
+    trader_id: str = Field(..., min_length=1, max_length=64)
+    account_id: str = Field("ACCT-DEFAULT", max_length=64)
+    ip_address: str = Field("127.0.0.1", max_length=64)
+    side: Literal["BUY", "SELL"]
+    price: float = Field(0.0, ge=0, le=1e9, allow_inf_nan=False)
+    qty: int = Field(100, ge=0, le=10**9)
+    timestamp_ms: int = Field(..., ge=0)
+    tag: Optional[str] = Field(None, max_length=64)
 
 
 class SurveilRequest(BaseModel):
-    symbol: str = "ACME"
-    vpin_bucket_volume: int = 500
-    session_end_ts_ms: Optional[int] = None
-    events: Optional[List[OrderEventPayload]] = None
+    symbol: str = Field("ACME", max_length=16)
+    vpin_bucket_volume: int = Field(500, ge=10, le=10**9)
+    session_end_ts_ms: Optional[int] = Field(None, ge=0)
+    events: Optional[List[OrderEventPayload]] = Field(None, max_length=MAX_EVENTS)
 
 
+@lru_cache(maxsize=1)
 def _get_cached_session_state() -> Dict[str, Any]:
     scenario = generate_market_session(symbol="ACME", seed=42)
     lob, report = run_surveillance(
@@ -91,7 +117,7 @@ def get_health() -> Dict[str, Any]:
     }
 
 
-@app.post("/surveil")
+@app.post("/surveil", dependencies=[Depends(require_key)])
 def post_surveil(req: SurveilRequest) -> Dict[str, Any]:
     if req.events is not None and len(req.events) > 0:
         order_events = [
@@ -115,12 +141,15 @@ def post_surveil(req: SurveilRequest) -> Dict[str, Any]:
         order_events = scenario.events
         session_end = req.session_end_ts_ms or scenario.session_end_ts_ms
 
-    lob, report = run_surveillance(
-        order_events,
-        symbol=req.symbol,
-        vpin_bucket_volume=req.vpin_bucket_volume,
-        session_end_ts_ms=session_end,
-    )
+    try:
+        lob, report = run_surveillance(
+            order_events,
+            symbol=req.symbol,
+            vpin_bucket_volume=req.vpin_bucket_volume,
+            session_end_ts_ms=session_end,
+        )
+    except ValueError as exc:  # malformed event stream (duplicate IDs, bad prices, ...)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     latest_snap = lob.snapshot(
         timestamp_ms=order_events[-1].timestamp_ms if order_events else 0
     )
@@ -131,7 +160,7 @@ def post_surveil(req: SurveilRequest) -> Dict[str, Any]:
     }
 
 
-@app.get("/episodes")
+@app.get("/episodes", dependencies=[Depends(require_key)])
 def list_episodes() -> Dict[str, Any]:
     state = _get_cached_session_state()
     scenario = state["scenario"]
@@ -167,7 +196,7 @@ def list_episodes() -> Dict[str, Any]:
     }
 
 
-@app.get("/episodes/{episode_id}")
+@app.get("/episodes/{episode_id}", dependencies=[Depends(require_key)])
 def get_episode_detail(episode_id: str) -> Dict[str, Any]:
     state = _get_cached_session_state()
     scenario = state["scenario"]
@@ -221,6 +250,11 @@ def get_episode_detail(episode_id: str) -> Dict[str, Any]:
     }
 
 
-@app.get("/bench")
+@app.get("/bench", dependencies=[Depends(require_key)])
 def get_bench() -> Dict[str, Any]:
+    return _cached_bench()
+
+
+@lru_cache(maxsize=1)
+def _cached_bench() -> Dict[str, Any]:
     return run_benchmark(seed=42)

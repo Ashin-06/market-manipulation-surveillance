@@ -282,3 +282,20 @@ def test_multi_session_sweep_has_no_false_positives() -> None:
     assert sweep["mktsurv"]["false_positives"] == 0
     assert sweep["mktsurv"]["recall"] == 1.0
     assert sweep["naive_baseline"]["hard_negative_fp_rate"] > 0.3
+
+
+def test_api_key_and_input_limits(monkeypatch) -> None:
+    import mktsurv.api as api
+
+    client = TestClient(app)
+    monkeypatch.setattr(api, "API_KEY", "s3cret")
+    assert client.get("/bench").status_code == 401
+    assert client.get("/health").status_code == 200
+    hdr = {"X-API-Key": "s3cret"}
+    ev = {"event_type": "ADD", "order_id": "O1", "trader_id": "T", "side": "BUY", "price": 10.0, "qty": 5, "timestamp_ms": 1}
+    assert client.post("/surveil", json={"events": [ev]}, headers=hdr).status_code == 200
+    # Duplicate order IDs are a 400 from the book, not a 500
+    assert client.post("/surveil", json={"events": [ev, ev]}, headers=hdr).status_code == 400
+    assert client.post("/surveil", json={"events": [dict(ev, side="SIDEWAYS")]}, headers=hdr).status_code == 422
+    too_many = [dict(ev, order_id=f"O{i}") for i in range(api.MAX_EVENTS + 1)]
+    assert client.post("/surveil", json={"events": too_many}, headers=hdr).status_code == 422

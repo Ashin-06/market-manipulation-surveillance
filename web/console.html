@@ -130,7 +130,8 @@
       <div class="subtitle">Spoofing &amp; Layering • Collusive Wash-Trading Rings • Marking-the-Close • VPIN Order-Flow Toxicity &amp; Front-Running</div>
     </div>
     <div>
-      <span class="badge">PORT 8015 • L3 MATCHING ENGINE</span>
+      <input type="password" id="apiKey" placeholder="X-API-Key (if set)" autocomplete="off" />
+      <span class="badge">PORT 8015 • SIMULATED SESSION</span>
       <button class="btn" onclick="loadDashboard()" style="margin-left:10px;">Run Surveillance</button>
     </div>
   </header>
@@ -184,11 +185,27 @@
   </div>
 
   <script>
+    function esc(v) {
+      return String(v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function api(path) {
+      const key = document.getElementById('apiKey').value;
+      return fetch(path, key ? { headers: { 'X-API-Key': key } } : {}).then(async r => {
+        const body = await r.json();
+        if (!r.ok) throw new Error(JSON.stringify(body.detail));
+        return body;
+      });
+    }
+
     async function loadDashboard() {
-      const [benchRes, epRes] = await Promise.all([
-        fetch('/bench').then(r => r.json()),
-        fetch('/episodes').then(r => r.json())
-      ]);
+      let benchRes, epRes;
+      try {
+        [benchRes, epRes] = await Promise.all([api('/bench'), api('/episodes')]);
+      } catch (e) {
+        document.getElementById('episode-detail').textContent = 'Error: ' + e.message;
+        return;
+      }
 
       document.getElementById('kpi-f1').textContent = (benchRes.mktsurv.f1_score * 100).toFixed(1) + '%';
       document.getElementById('kpi-f1-sub').textContent = `Naive OTR Baseline F1: ${(benchRes.naive_baseline.f1_score * 100).toFixed(1)}%`;
@@ -211,9 +228,9 @@
           ? (ep.flagged_by_naive_otr ? '<span class="pill pill-purple">FLAGGED (TP)</span>' : '<span class="pill pill-amber">MISSED (FN)</span>')
           : (ep.flagged_by_naive_otr ? '<span class="pill pill-red">FALSE POS (FP)</span>' : '<span class="pill pill-green">CLEAN (TN)</span>');
         tr.innerHTML = `
-          <td><strong>${ep.episode_id}</strong></td>
-          <td>${ep.sub_type}</td>
-          <td>${ep.traders.join(', ')}</td>
+          <td><strong>${esc(ep.episode_id)}</strong></td>
+          <td>${esc(ep.sub_type)}</td>
+          <td>${esc(ep.traders.join(', '))}</td>
           <td>${mktBadge}</td>
           <td>${naiveBadge}</td>
         `;
@@ -236,7 +253,7 @@
     }
 
     async function inspectEpisode(epId) {
-      const detail = await fetch(`/episodes/${epId}`).then(r => r.json());
+      const detail = await api(`/episodes/${encodeURIComponent(epId)}`);
       document.getElementById('episode-detail').textContent = JSON.stringify(detail, null, 2);
     }
 
