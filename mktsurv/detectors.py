@@ -326,7 +326,20 @@ def detect_wash_trading(
 
     sorted_fills = sorted(fills, key=lambda f: f.timestamp_ms)
     alerts: List[WashTradingAlert] = []
-    flagged_fill_sets: List[Set[str]] = []
+    flagged_fill_sets: List[Set[str]] = []  # flagged_fill_sets[k] holds the fills of alerts[k]
+
+    def _make_room(fids: Set[str]) -> bool:
+        """
+        False if an existing alert already covers these fills. Otherwise drop any earlier alert
+        whose fills this one contains: an early window may hold only one leg of a ring, and that
+        partial alert must not hide the full ring found in a later window.
+        """
+        if any(fids <= prev for prev in flagged_fill_sets):
+            return False
+        keep = [k for k, prev in enumerate(flagged_fill_sets) if not prev < fids]
+        alerts[:] = [alerts[k] for k in keep]
+        flagged_fill_sets[:] = [flagged_fill_sets[k] for k in keep]
+        return True
 
     # 1. Direct Self-Trades
     self_trades_by_trader: Dict[str, List[TradeFill]] = {}
@@ -431,7 +444,7 @@ def detect_wash_trading(
                             continue
 
                         fids_set = {f.fill_id for f in c_fills}
-                        if any(fids_set.issubset(prev) or prev.issubset(fids_set) for prev in flagged_fill_sets):
+                        if not _make_room(fids_set):
                             continue
 
                         ring_key = (tuple(sorted(ring_traders)), min(f.timestamp_ms for f in c_fills) // 10000)
@@ -484,7 +497,7 @@ def detect_wash_trading(
                         continue
 
                     fids_set = {f.fill_id for f in c_fills}
-                    if any(fids_set.issubset(prev) or prev.issubset(fids_set) for prev in flagged_fill_sets):
+                    if not _make_room(fids_set):
                         continue
 
                     ring_key = ((a, b), min(f.timestamp_ms for f in c_fills) // 10000)
@@ -513,6 +526,8 @@ def detect_wash_trading(
                         )
                     )
 
+    for k, alert in enumerate(alerts, start=1):
+        alert.alert_id = f"WSH-{k:04d}"
     return alerts
 
 

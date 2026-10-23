@@ -246,3 +246,14 @@ def test_chance_trade_triangle_between_unrelated_traders_is_not_a_wash_ring() ->
     assert not (set(report.flagged_traders) & set(scenario.benign_traders))
     rings = [a for a in report.wash_trading_alerts if a.detector == "COLLUSIVE_WASH_RING_3HOP"]
     assert [sorted(a.traders) for a in rings] == [["RING_A", "RING_B", "RING_C"]]
+
+
+def test_full_wash_ring_replaces_an_earlier_partial_alert() -> None:
+    # Seed 10: an early window held only RING_A -> RING_B (shared IP, 566 sh) and its alert
+    # used to suppress the full RING_A -> RING_B -> RING_C ring found in a later window.
+    scenario = generate_market_session(symbol="ACME", seed=10)
+    _, report = run_surveillance(scenario.events, symbol="ACME", vpin_bucket_volume=500,
+                                 session_end_ts_ms=scenario.session_end_ts_ms)
+    assert {"RING_A", "RING_B", "RING_C"} <= set(report.flagged_traders)
+    ids = [a.alert_id for a in report.wash_trading_alerts]
+    assert len(ids) == len(set(ids))
