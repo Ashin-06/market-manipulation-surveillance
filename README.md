@@ -71,14 +71,21 @@ Using this on real flow would still need real account attribution. Nasdaq's publ
 ## Run it
 
 ```bash
-pip install -r requirements.txt
-python -m pytest -q                    # 15 tests
+pip install -r requirements.txt        # or: pip install -r requirements-dev.lock && pip install -e .
+python -m pytest -q                    # 36 tests
 python -m mktsurv bench                # single session + 200-session sweep
 python -m mktsurv realdata --data DIR  # LOBSTER sample files, about 7 minutes
-python -m mktsurv serve --port 8015    # API + console at http://127.0.0.1:8015
+python -m mktsurv serve                # API + console at http://127.0.0.1:8015 (open, loopback only)
+docker build -t market-manipulation-surveillance .   # production image; see docs/runbook.md
 ```
 
-Endpoints: `POST /surveil` (your own events, up to 5,000, or the simulated session), `GET /episodes`, `GET /episodes/{id}`, `GET /bench`, `GET /health`. Set `MKTSURV_API_KEY` to require it in the `X-API-Key` header (the console has a field for it). Without the key the server runs open, and `serve` refuses to bind a non-loopback address.
+Endpoints:
+- `POST /surveil`: your own events (up to 5,000) or the simulated session. Alerts raised on your events are stored and get IDs.
+- `GET /alerts`, `GET /alerts/{id}`, `POST /alerts/{id}/review`: the alert queue. Escalate, dismiss or reopen an alert with a note; every review is kept with the reviewer's name.
+- `GET /episodes`, `GET /episodes/{id}`, `GET /bench`: the simulator and benchmark.
+- `GET /healthz`, `GET /readyz`, `GET /metrics`: liveness, readiness and Prometheus metrics.
+
+Each caller gets an API key with a role: `feed` submits order flow, `viewer` reads, `analyst` submits, reads and reviews, `monitor` scrapes metrics. Make one with `python -m mktsurv.ops keygen` and list its hash in `MKTSURV_API_KEYS` or `MKTSURV_KEYS_FILE`; the console has a field for the key. Without keys the server runs open and refuses to bind a non-loopback address. With `MKTSURV_ENV=production` it refuses to start without hashed keys and a database. Settings, key rotation and backups are in [docs/runbook.md](docs/runbook.md); what the rules can and can't do is in [docs/model-card.md](docs/model-card.md).
 
 ## Limits
 
@@ -89,4 +96,20 @@ Endpoints: `POST /surveil` (your own events, up to 5,000, or the simulated sessi
 - **Front-running needs the victim's trades in the same feed** and only looks at one block at a time. It also needs the front-runner to be at least half of the volume just before the block, so someone front-running in small pieces inside heavy flow goes unseen.
 - **Wash loops must dominate the members' trading.** Accounts that wash-trade with each other while also trading normally, so the loop is under half of their volume in the window, are not reported unless they share an IP.
 - **Typical size comes from the data being checked.** In a quiet window a manipulator's own large orders raise it, which raises the thresholds they are measured against.
-- **No deployment story**: no TLS, rate limiting, persistence, case management or audit trail.
+- **Thin case management.** Alerts and reviews are stored, but there is no assignment, SLA tracking or tamper-evident history of reviews. TLS is left to the ingress.
+
+## Production readiness
+
+**In place** (see [docs/runbook.md](docs/runbook.md), [docs/threat-model.md](docs/threat-model.md), [docs/model-card.md](docs/model-card.md)):
+- Pinned dependencies (`requirements.lock`), `pyproject.toml`, a container image that runs as a non-root user with a health check, and CI (ruff, bandit, pip-audit, tests with coverage).
+- Production mode that refuses to start without hashed per-client API keys and a database, and no public listening without keys. There are no default secrets.
+- Roles on keys, per-client rate limits, a body cap, security headers, CORS only for listed origins, and errors that don't echo input or internals.
+- Alerts, the runs that raised them and analyst reviews in SQLite or Postgres, with numbered migrations.
+- JSON logs with request IDs, `/healthz`, `/readyz`, and Prometheus metrics including alerts by pattern.
+
+**Still needed before it watches a real market**, none of which code can supply:
+- An independent security review and penetration test.
+- Validation on a venue's or broker's own order flow with real account attribution. Recall on real data is unknown, and the real-data false-alert rates above rest on random pseudo-traders.
+- Sign-off from compliance and the regulator (SEBI's surveillance requirements for the venue or broker; RBI where the bank's treasury desk is the user; DPDP Act 2023 for personal data in order records).
+- Real integrations: the venue's or OMS's order feed, beneficial-ownership data for account linkage, and the case management system analysts already use.
+- Keys and the database in managed infrastructure (a KMS or HSM for key material, encrypted storage, retention rules), and an on-call team with SLOs for alert review.
