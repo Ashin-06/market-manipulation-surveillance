@@ -152,6 +152,7 @@ def detect_spoofing_layering(
     max_spoof_fill_ratio: float = 0.20,
     min_spoof_size: float = 5.0,
     lookback_ms: int = 10000,
+    min_one_sided_ratio: float = 3.0,
 ) -> List[SpoofingAlert]:
     """
     Detects Spoofing (1 price level) and Layering (2-4+ price levels).
@@ -164,6 +165,10 @@ def detect_spoofing_layering(
           while the spoof orders are live on the book.
       (c) Rapid cancellation (< 2000 ms after opposite fill) of > 80% of the
           `spoof_side` orders immediately after the opposite execution.
+      (d) One-sidedness: the spoof volume is at least `min_one_sided_ratio` times the
+          trader's own orders live on `exec_side` at the execution. A market maker also
+          pulls a large quote right after being filled on the other side, but it rests
+          about as much on that other side.
     """
     alerts: List[SpoofingAlert] = []
     lifecycles = list(lob.lifecycles.values())
@@ -230,6 +235,15 @@ def detect_spoofing_layering(
 
             cancel_ratio = total_canceled_qty / float(total_spoof_qty)
             if cancel_ratio < min_cancel_ratio:
+                continue
+
+            exec_side_qty = sum(
+                o.initial_qty
+                for o in trader_orders
+                if o.side == exec_side and o.placed_ts_ms <= exec_ts
+                and (o.remaining_qty > 0 or o.last_event_ts_ms >= exec_ts)
+            )
+            if total_spoof_qty < min_one_sided_ratio * exec_side_qty:
                 continue
 
             # Directional OBI in favor of spoof_side:

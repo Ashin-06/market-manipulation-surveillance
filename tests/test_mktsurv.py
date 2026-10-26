@@ -316,3 +316,22 @@ def test_equal_lot_round_trip_between_busy_accounts_is_not_a_wash_loop() -> None
 
     assert [a.detector for a in detect_wash_trading(book(busy=False).fills)] == ["COLLUSIVE_WASH_RING_2HOP"]
     assert detect_wash_trading(book(busy=True).fills) == []  # the loop is a third of their trading
+
+
+def test_quoter_resting_on_both_sides_is_not_a_spoofer() -> None:
+    def book(two_sided: bool) -> LimitOrderBook:
+        lob = LimitOrderBook(symbol="QUOTE")
+        lob.process_event(OrderEvent("ADD", "MM_B", "MM1", "A_MM", "10.0.0.1", "BUY", 99.99, 200, 100))
+        lob.process_event(OrderEvent("ADD", "MM_S", "MM1", "A_MM", "10.0.0.1", "SELL", 100.01, 200, 110))
+        for lvl, px in enumerate([100.01, 100.02, 100.03]):
+            lob.process_event(OrderEvent("ADD", f"ASK_{lvl}", "Q", "A_Q", "45.1.1.1", "SELL", px, 800, 2000 + lvl * 20))
+        for lvl, px in enumerate([99.97, 99.98, 99.99] if two_sided else []):  # as much resting on the bid
+            lob.process_event(OrderEvent("ADD", f"BID_{lvl}", "Q", "A_Q", "45.1.1.1", "BUY", px, 800, 2060 + lvl * 5))
+        lob.process_event(OrderEvent("ADD", "LURED", "VICTIM_1", "A_VIC", "10.0.0.8", "SELL", 100.00, 150, 2080))
+        lob.process_event(OrderEvent("ADD", "Q_BUY", "Q", "A_Q", "45.1.1.1", "BUY", 100.00, 150, 2100))
+        for lvl, px in enumerate([100.01, 100.02, 100.03]):
+            lob.process_event(OrderEvent("CANCEL", f"ASK_{lvl}", "Q", "A_Q", "45.1.1.1", "SELL", px, 800, 2400 + lvl * 20))
+        return lob
+
+    assert [a.detector for a in detect_spoofing_layering(book(False), min_spoof_size=1)] == ["LAYERING"]
+    assert detect_spoofing_layering(book(True), min_spoof_size=1) == []
