@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
-from .lob import LimitOrderBook, OrderEvent, OrderLifecycle, TradeFill
+from .lob import LimitOrderBook, OrderEvent, OrderLifecycle, TradeFill, typical_size
 from .vpin import FrontRunningAlert, VPINResult, compute_vpin, detect_front_running
 
 
@@ -150,14 +150,15 @@ def detect_spoofing_layering(
     max_cancel_after_fill_ms: int = 2000,
     min_cancel_ratio: float = 0.80,
     max_spoof_fill_ratio: float = 0.20,
-    min_spoof_qty: int = 500,
+    min_spoof_size: float = 5.0,
     lookback_ms: int = 10000,
 ) -> List[SpoofingAlert]:
     """
     Detects Spoofing (1 price level) and Layering (2-4+ price levels).
 
     Requires the joint microstructure signature:
-      (a) Large non-bona-fide resting volume placed across 1-4+ price levels on
+      (a) Large non-bona-fide resting volume (at least `min_spoof_size` times the
+          `typical_size` of all orders in the book) placed across 1-4+ price levels on
           `spoof_side` creating > 0.55 directional book imbalance.
       (b) Bona-fide trade execution by the SAME trader on the OPPOSITE side (`exec_side`)
           while the spoof orders are live on the book.
@@ -166,6 +167,7 @@ def detect_spoofing_layering(
     """
     alerts: List[SpoofingAlert] = []
     lifecycles = list(lob.lifecycles.values())
+    min_spoof_qty = min_spoof_size * typical_size(lc.initial_qty for lc in lifecycles)
 
     # Index lifecycles by trader_id
     by_trader: Dict[str, List[OrderLifecycle]] = {}
@@ -305,9 +307,10 @@ def detect_spoofing_layering(
 def detect_wash_trading(
     fills: List[TradeFill],
     window_ms: int = 60000,
-    min_ring_volume: int = 500,
-    min_edge_volume: int = 150,
+    min_ring_size: float = 2.0,
+    min_edge_size: float = 0.5,
     max_net_to_gross_ratio: float = 0.05,
+    min_ring_share: float = 0.5,
 ) -> List[WashTradingAlert]:
     """
     Detects:
@@ -319,12 +322,19 @@ def detect_wash_trading(
     A balanced loop of trades between unrelated accounts happens by chance in any busy book, so a
     ring is only reported with some evidence of prearrangement: two members sharing an IP address,
     every leg traded at least twice in the window (repeated round trips), or every leg of exactly
-    the same size (matched orders).
+    the same size (matched orders). Without a shared IP the loop must also be at least
+    `min_ring_share` of each member's trading in the window: accounts that trade a lot in a busy
+    book trade with each other both ways, in repeated or equal lots, by chance.
+
+    Loop and leg volumes are multiples (`min_ring_size`, `min_edge_size`) of the fills'
+    `typical_size`.
     """
     if not fills:
         return []
 
     sorted_fills = sorted(fills, key=lambda f: f.timestamp_ms)
+    unit = typical_size(f.qty for f in sorted_fills)
+    min_ring_volume, min_edge_volume = min_ring_size * unit, min_edge_size * unit
     alerts: List[WashTradingAlert] = []
     flagged_fill_sets: List[Set[str]] = []  # flagged_fill_sets[k] holds the fills of alerts[k]
 
@@ -340,6 +350,14 @@ def detect_wash_trading(
         alerts[:] = [alerts[k] for k in keep]
         flagged_fill_sets[:] = [flagged_fill_sets[k] for k in keep]
         return True
+
+    def _mostly_within(members: Tuple[str, ...], loop_fills: List[TradeFill], traded: Dict[str, int]) -> bool:
+        """Each member did at least `min_ring_share` of its trading in the window inside the loop."""
+        inside = dict.fromkeys(members, 0)
+        for f in loop_fills:
+            inside[f.buyer_trader_id] += f.qty
+            inside[f.seller_trader_id] += f.qty
+        return all(inside[t] >= min_ring_share * traded[t] for t in members)
 
     # 1. Direct Self-Trades
     self_trades_by_trader: Dict[str, List[TradeFill]] = {}
@@ -393,10 +411,13 @@ def detect_wash_trading(
         trader_acct: Dict[str, str] = {}
         trader_ip: Dict[str, str] = {}
         neighbors: Dict[str, Set[str]] = {}
+        traded: Dict[str, int] = {}
 
         for f in window_fills:
             u = f.seller_trader_id
             v = f.buyer_trader_id
+            traded[u] = traded.get(u, 0) + f.qty
+            traded[v] = traded.get(v, 0) + f.qty
             edge_vol[(u, v)] = edge_vol.get((u, v), 0) + f.qty
             edge_fills.setdefault((u, v), []).append(f)
             neighbors.setdefault(u, set()).add(v)
@@ -440,7 +461,7 @@ def detect_wash_trading(
                         legs = ((a, b), (b, c), (c, a))
                         repeated = min(len(edge_fills[e]) for e in legs) >= 2
                         matched_sizes = len({edge_vol[e] for e in legs}) == 1
-                        if not (shared_ip or repeated or matched_sizes):
+                        if not (shared_ip or ((repeated or matched_sizes) and _mostly_within(ring_traders, c_fills, traded))):
                             continue
 
                         fids_set = {f.fill_id for f in c_fills}
@@ -493,7 +514,7 @@ def detect_wash_trading(
                     if net_ratio >= max_net_to_gross_ratio and not same_ip:
                         continue
                     repeated = min(len(edge_fills.get((a, b), [])), len(edge_fills.get((b, a), []))) >= 2
-                    if not (same_ip or repeated or v_ab == v_ba):
+                    if not (same_ip or ((repeated or v_ab == v_ba) and _mostly_within((a, b), c_fills, traded))):
                         continue
 
                     fids_set = {f.fill_id for f in c_fills}

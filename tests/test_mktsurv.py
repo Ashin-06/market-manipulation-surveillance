@@ -298,3 +298,21 @@ def test_api_key_and_input_limits(monkeypatch) -> None:
     assert client.post("/surveil", json={"events": [dict(ev, side="SIDEWAYS")]}, headers=hdr).status_code == 422
     too_many = [dict(ev, order_id=f"O{i}") for i in range(api.MAX_EVENTS + 1)]
     assert client.post("/surveil", json={"events": too_many}, headers=hdr).status_code == 422
+
+
+def test_equal_lot_round_trip_between_busy_accounts_is_not_a_wash_loop() -> None:
+    def book(busy: bool) -> LimitOrderBook:
+        lob = LimitOrderBook(symbol="BUSY")
+        lob.process_event(OrderEvent("ADD", "O1", "A", "ACC_A", "192.0.2.1", "SELL", 50.00, 500, 1000))
+        lob.process_event(OrderEvent("ADD", "O2", "B", "ACC_B", "192.0.2.2", "BUY", 50.00, 500, 1010))
+        lob.process_event(OrderEvent("ADD", "O3", "B", "ACC_B", "192.0.2.2", "SELL", 50.00, 500, 2000))
+        lob.process_event(OrderEvent("ADD", "O4", "A", "ACC_A", "192.0.2.1", "BUY", 50.00, 500, 2010))
+        for i in range(10 if busy else 0):  # A and B also buy 2,000 shares each from others
+            for seller, buyer in (("X", "A"), ("Y", "B")):
+                ts = 3000 + i * 100
+                lob.process_event(OrderEvent("ADD", f"S{seller}{i}", seller, f"ACC_{seller}", f"192.0.2.{ord(seller)}", "SELL", 50.00, 200, ts))
+                lob.process_event(OrderEvent("ADD", f"B{buyer}{i}", buyer, f"ACC_{buyer}", f"192.0.2.{ord(buyer)}", "BUY", 50.00, 200, ts + 10))
+        return lob
+
+    assert [a.detector for a in detect_wash_trading(book(busy=False).fills)] == ["COLLUSIVE_WASH_RING_2HOP"]
+    assert detect_wash_trading(book(busy=True).fills) == []  # the loop is a third of their trading
