@@ -322,7 +322,8 @@ def detect_wash_trading(
     A balanced loop of trades between unrelated accounts happens by chance in any busy book, so a
     ring is only reported with some evidence of prearrangement: two members sharing an IP address,
     every leg traded at least twice in the window (repeated round trips), or every leg of exactly
-    the same size (matched orders). Without a shared IP the loop must also be at least
+    the same size at one price (matched orders: same size, time and price; equal round lots at
+    different prices are routine). Without a shared IP the loop must also be at least
     `min_ring_share` of each member's trading in the window: accounts that trade a lot in a busy
     book trade with each other both ways, in repeated or equal lots, by chance.
 
@@ -460,8 +461,8 @@ def detect_wash_trading(
                         shared_ip = len(ips) < len(ring_traders)
                         legs = ((a, b), (b, c), (c, a))
                         repeated = min(len(edge_fills[e]) for e in legs) >= 2
-                        matched_sizes = len({edge_vol[e] for e in legs}) == 1
-                        if not (shared_ip or ((repeated or matched_sizes) and _mostly_within(ring_traders, c_fills, traded))):
+                        matched = len({edge_vol[e] for e in legs}) == 1 and len({f.price for f in c_fills}) == 1
+                        if not (shared_ip or ((repeated or matched) and _mostly_within(ring_traders, c_fills, traded))):
                             continue
 
                         fids_set = {f.fill_id for f in c_fills}
@@ -514,7 +515,8 @@ def detect_wash_trading(
                     if net_ratio >= max_net_to_gross_ratio and not same_ip:
                         continue
                     repeated = min(len(edge_fills.get((a, b), [])), len(edge_fills.get((b, a), []))) >= 2
-                    if not (same_ip or ((repeated or v_ab == v_ba) and _mostly_within((a, b), c_fills, traded))):
+                    matched = v_ab == v_ba and len({f.price for f in c_fills}) == 1
+                    if not (same_ip or ((repeated or matched) and _mostly_within((a, b), c_fills, traded))):
                         continue
 
                     fids_set = {f.fill_id for f in c_fills}
