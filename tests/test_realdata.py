@@ -33,3 +33,17 @@ def test_lobster_messages_become_lifecycles_and_fills(tmp_path) -> None:
     hidden = [f for f in day.fills if f.passive_order_id.startswith("HID-")]
     assert len(hidden) == 1 and hidden[0].aggressor_side == "SELL" and hidden[0].qty == 70
     assert surveil_windows(day)["windows"] == 26
+
+
+def test_sweep_over_every_pseudo_traders_orders_is_split_not_self_matched(tmp_path) -> None:
+    t0 = OPEN_MS / 1000
+    asks = [(t0 + 1.0 + i / 10, 1, 20 + i, 100, 1_000_100, -1) for i in range(8)]   # 8 asks @ 100.01
+    sweep = [(t0 + 3.0, 4, 20 + i, 100, 1_000_100, -1) for i in range(8)]           # one buyer takes them all
+    book = [x for lvl in range(10) for x in (1_000_100 + 100 * lvl, 100, 1_000_000 - 100 * lvl, 150)]
+    (tmp_path / "X_message_10.csv").write_text("\n".join(",".join(map(str, m)) for m in asks + sweep))
+    pd.DataFrame([book] * 16).to_csv(tmp_path / "X_orderbook_10.csv", header=False, index=False)
+
+    day = build(load(tmp_path / "X_message_10.csv", tmp_path / "X_orderbook_10.csv"), n_traders=2, seed=0)
+    assert len({lc.trader_id for oid, lc in day.lifecycles.items() if not oid.startswith("AGG-")}) == 2
+    assert all(f.buyer_trader_id != f.seller_trader_id for f in day.fills)
+    assert len({f.aggressor_order_id for f in day.fills}) == 1 + day.stats["split_sweeps"] > 1

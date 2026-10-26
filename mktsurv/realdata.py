@@ -13,7 +13,8 @@ The data carries no trader, account or IP fields. Every order is given to one of
 pseudo-traders uniformly at random, each with its own account and IP. Executions show only
 the resting side, so each burst of executions with the same timestamp and side becomes one
 aggressor order from another random pseudo-trader (never the owner of an order it hits: real
-venues and brokers prevent self-matching). Hidden executions become fills against a random
+venues and brokers prevent self-matching; a burst that hits orders of every pseudo-trader is
+split between aggressors). Hidden executions become fills against a random
 pseudo-trader's hidden order. Under this attribution any alert is a coincidence of real
 order flow, so every alert counts as false. Real ownership would cluster each firm's quoting
 and could give more or fewer alerts.
@@ -64,7 +65,8 @@ def build(msgs: pd.DataFrame, n_traders: int, seed: int = 0) -> SimpleNamespace:
     ident = {t: (f"ACCT-{t}", f"10.{i // 250}.{i % 250}.1") for i, t in enumerate(traders)}
     lcs: Dict[str, OrderLifecycle] = {}
     fills: List[TradeFill] = []
-    stats = {"messages": len(msgs), "unknown_order_refs": 0, "hidden_executions": 0, "halts_or_crosses": 0}
+    stats = {"messages": len(msgs), "unknown_order_refs": 0, "hidden_executions": 0, "halts_or_crosses": 0,
+             "split_sweeps": 0}
 
     def order(oid: str, side: str, price: float, qty: int, ts: int, obi: float) -> OrderLifecycle:
         t = rng.choice(traders)
@@ -83,18 +85,27 @@ def build(msgs: pd.DataFrame, n_traders: int, seed: int = 0) -> SimpleNamespace:
     pending: List[tuple] = []  # executions sharing a timestamp and side: one aggressor sweeps them
 
     def flush() -> None:
-        if not pending:
-            return
-        ts, side = pending[0][0], pending[0][1]
-        owners = {p.trader_id for _, _, p, _, _ in pending}
-        t = rng.choice([x for x in traders if x not in owners] or traders)
-        aggr = OrderLifecycle(f"AGG-{len(lcs)}", t, *ident[t], side, pending[0][3], sum(q for *_, q in pending),
-                              placed_ts_ms=ts, last_event_ts_ms=ts, first_fill_ts_ms=ts, status="FILLED")
-        aggr.filled_qty = aggr.initial_qty
-        lcs[aggr.order_id] = aggr
-        for ts_, _, passive, price, qty in pending:
-            fill(ts_, price, qty, aggr, passive)
-        pending.clear()
+        while pending:
+            # A burst that hits orders of every pseudo-trader is split between aggressors,
+            # so none of them trades with itself
+            owners: set = set()
+            k = 0
+            while k < len(pending) and len(owners | {pending[k][2].trader_id}) < n_traders:
+                owners.add(pending[k][2].trader_id)
+                k += 1
+            k = max(k, 1)  # a lone pseudo-trader can only trade with itself
+            burst = pending[:k]
+            del pending[:k]
+            stats["split_sweeps"] += bool(pending)
+            ts, side = burst[0][0], burst[0][1]
+            owners = {p.trader_id for _, _, p, _, _ in burst}
+            t = rng.choice([x for x in traders if x not in owners] or traders)
+            aggr = OrderLifecycle(f"AGG-{len(lcs)}", t, *ident[t], side, burst[0][3], sum(q for *_, q in burst),
+                                  placed_ts_ms=ts, last_event_ts_ms=ts, first_fill_ts_ms=ts, status="FILLED")
+            aggr.filled_qty = aggr.initial_qty
+            lcs[aggr.order_id] = aggr
+            for ts_, _, passive, price, qty in burst:
+                fill(ts_, price, qty, aggr, passive)
 
     for ts, typ, oid, size, price, direction, obi in rows:
         px, oid, side = price / 10_000, str(oid), SIDE.get(direction, "BUY")
