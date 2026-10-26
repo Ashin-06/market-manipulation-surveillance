@@ -205,7 +205,7 @@ def detect_spoofing_layering(
         if not trader_orders:
             continue
 
-        for exec_side, fill, exec_order_id in trader_fills:
+        for exec_side, fill, _exec_order_id in trader_fills:
             spoof_side = "SELL" if exec_side == "BUY" else "BUY"
             exec_ts = fill.timestamp_ms
 
@@ -380,7 +380,7 @@ def detect_wash_trading(
         if f.buyer_trader_id == f.seller_trader_id or f.buyer_account_id == f.seller_account_id:
             self_trades_by_trader.setdefault(f.buyer_trader_id, []).append(f)
 
-    for trader_id, st_fills in self_trades_by_trader.items():
+    for _trader_id, st_fills in self_trades_by_trader.items():
         gross_vol = sum(f.qty for f in st_fills)
         fids = [f.fill_id for f in st_fills]
         flagged_fill_sets.append(set(fids))

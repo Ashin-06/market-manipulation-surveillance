@@ -190,7 +190,8 @@ def experiments(data_dir: str | Path, traders: Sequence[int] = (10, 50, 200), se
     res: dict = {"dataset": "LOBSTER sample files, Nasdaq, 21 June 2012, 10 levels", "hours_per_day": hours,
                  "attribution": "orders and aggressors assigned to pseudo-traders uniformly at random",
                  "seeds": list(seeds), "stocks": {}}
-    mean = lambda xs: round(sum(xs) / len(xs), 2)
+    def mean(xs):
+        return round(sum(xs) / len(xs), 2)
     for msg_csv in sorted(glob(str(Path(data_dir) / "*_message_10.csv"))):
         ticker = Path(msg_csv).name.split("_")[0]
         msgs = load(msg_csv, msg_csv.replace("_message_", "_orderbook_"))
