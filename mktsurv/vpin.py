@@ -14,7 +14,7 @@ import math
 from dataclasses import asdict, dataclass, field
 from typing import Dict, List, Optional
 
-from .lob import TradeFill
+from .lob import TradeFill, typical_size
 
 
 @dataclass
@@ -250,11 +250,12 @@ def compute_vpin(
 def detect_front_running(
     fills: List[TradeFill],
     vpin_result: Optional[VPINResult] = None,
-    block_min_qty: int = 1200,
+    block_min_size: float = 3.0,
     sweep_cluster_ms: int = 2500,
     pre_window_ms: int = 15000,
     post_window_ms: int = 15000,
-    min_front_run_qty: int = 200,
+    min_front_run_size: float = 0.5,
+    min_pre_share: float = 0.5,
     min_unwind_ratio: float = 0.60,
     min_edge_bps: float = 8.0,
 ) -> List[FrontRunningAlert]:
@@ -262,6 +263,11 @@ def detect_front_running(
     Detects pre-block-trade front-running where a predatory trader accumulates
     directional inventory seconds before a large institutional block/sweep and
     unwinds into or immediately after the institutional sweep at an elevated price.
+
+    Sizes are multiples of the fills' `typical_size`: a block is at least `block_min_size` of
+    it, the position at least `min_front_run_size`. The position must also be at least
+    `min_pre_share` of all volume traded in the `pre_window_ms` before the block; buying
+    and selling a few lots around a block is what every active account in a busy book does.
     """
     if not fills:
         return []
@@ -269,6 +275,9 @@ def detect_front_running(
     sorted_fills = sorted(fills, key=lambda f: f.timestamp_ms)
     if vpin_result is None:
         vpin_result = compute_vpin(sorted_fills)
+    unit = typical_size(f.qty for f in sorted_fills)
+    block_min_qty = block_min_size * unit
+    min_front_run_qty = min_front_run_size * unit
 
     # Step 1: Identify institutional directional sweep clusters
     sweeps: List[dict] = []
@@ -319,10 +328,13 @@ def detect_front_running(
 
         # Group pre-sweep and post-sweep trades by candidate trader
         candidate_traders: Dict[str, dict] = {}
+        pre_volume = 0
 
         for f in sorted_fills:
             if f.timestamp_ms < pre_start or f.timestamp_ms > post_end:
                 continue
+            if f.timestamp_ms < sw_start:
+                pre_volume += f.qty
 
             # Evaluate participation as buyer and seller
             for role_side, t_id, a_id, ip_addr, ord_id in (
@@ -366,7 +378,7 @@ def detect_front_running(
 
         for t_id, info in candidate_traders.items():
             net_pre = info["pre_same_qty"] - info["pre_opp_qty"]
-            if net_pre < min_front_run_qty or info["pre_same_qty"] <= 0:
+            if net_pre < min_front_run_qty or net_pre < min_pre_share * pre_volume or info["pre_same_qty"] <= 0:
                 continue
             unwound = info["post_unwind_qty"]
             if unwound <= 0:

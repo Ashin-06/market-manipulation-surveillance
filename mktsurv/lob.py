@@ -10,6 +10,23 @@ from dataclasses import asdict, dataclass, field
 from typing import Deque, Dict, Iterable, List, Optional, Tuple
 
 
+def typical_size(sizes: Iterable[int]) -> float:
+    """
+    Volume-weighted median size: half of all volume goes through pieces of this size or smaller.
+
+    The detectors express size thresholds as multiples of this, so they follow each instrument's
+    own trading instead of fixed share counts. A plain median would not do: most Nasdaq fills are
+    100 shares whether the stock costs $27 or $580; what differs is how large the big ones get.
+    """
+    s = sorted(sizes)
+    half, run = sum(s) / 2.0, 0
+    for q in s:
+        run += q
+        if run >= half:
+            return float(q)
+    return 0.0
+
+
 @dataclass
 class OrderEvent:
     """Level-3 order event entering the matching engine."""
