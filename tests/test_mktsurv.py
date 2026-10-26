@@ -211,9 +211,8 @@ def test_fastapi_endpoints() -> None:
     assert r_root.status_code == 200
     assert "mktsurv" in r_root.text
 
-    r_health = client.get("/health")
-    assert r_health.status_code == 200
-    assert r_health.json()["port"] == 8015
+    assert client.get("/healthz").json() == {"status": "ok"}
+    assert client.get("/readyz").status_code == 200
 
     r_bench = client.get("/bench")
     assert r_bench.status_code == 200
@@ -284,12 +283,16 @@ def test_multi_session_sweep_has_no_false_positives() -> None:
 
 
 def test_api_key_and_input_limits(monkeypatch) -> None:
+    import importlib
+    import json
+
     import mktsurv.api as api
 
-    client = TestClient(app)
-    monkeypatch.setattr(api, "API_KEY", "s3cret")
+    monkeypatch.setenv("MKTSURV_API_KEYS", json.dumps({"s3cret": {"user": "asha", "role": "analyst"}}))
+    api = importlib.reload(api)
+    client = TestClient(api.app)
     assert client.get("/bench").status_code == 401
-    assert client.get("/health").status_code == 200
+    assert client.get("/healthz").status_code == 200
     hdr = {"X-API-Key": "s3cret"}
     ev = {"event_type": "ADD", "order_id": "O1", "trader_id": "T", "side": "BUY", "price": 10.0, "qty": 5, "timestamp_ms": 1}
     assert client.post("/surveil", json={"events": [ev]}, headers=hdr).status_code == 200

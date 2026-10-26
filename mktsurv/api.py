@@ -3,32 +3,41 @@ FastAPI REST API & Web Console Server for `mktsurv` (Port 8015).
 
 Endpoints:
   - GET  /               -> Interactive Level-3 Surveillance Web Console (`web/console.html`)
-  - GET  /health         -> Health & engine metadata
-  - POST /surveil        -> Run L3 LOB + 4 manipulation detectors on custom or simulated events
-  - GET  /episodes       -> List all simulated episodes + detected alerts + VPIN series
-  - GET  /episodes/{id}  -> Detailed L3 event trace, lifecycles, fills, and alerts for an episode
-  - GET  /bench          -> Benchmark comparison (`mktsurv` vs Naive Regulatory OTR > 15)
+  - GET  /healthz, /readyz, /metrics -> liveness, readiness, Prometheus (role monitor)
+  - POST /surveil        -> Run L3 LOB + 4 manipulation detectors on custom or simulated events [surveil]
+                            (alerts on submitted events are stored for review)
+  - GET  /alerts         -> Stored alerts, newest first, by status / symbol [read]
+  - GET  /alerts/{id}    -> One alert with its review history [read]
+  - POST /alerts/{id}/review -> Escalate, dismiss or reopen an alert, with a note [review]
+  - GET  /episodes       -> List all simulated episodes + detected alerts + VPIN series [read]
+  - GET  /episodes/{id}  -> Detailed L3 event trace, lifecycles, fills, and alerts for an episode [read]
+  - GET  /bench          -> Benchmark comparison (`mktsurv` vs Naive Regulatory OTR > 15) [read]
 
-Set MKTSURV_API_KEY to require it in the X-API-Key header on every endpoint except / and /health
-(unset = open, for local use; `python -m mktsurv serve` refuses a non-loopback host without it).
+Callers send an API key (X-API-Key or Authorization: Bearer); its role decides the
+permissions in brackets. Settings and roles: see ops.py and docs/runbook.md. Without keys
+the server runs open, for local use only, and refuses to bind a non-loopback address.
 """
 
 from __future__ import annotations
 
-import hmac
-import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
+from . import db, ops
 from .bench import run_benchmark
 from .detectors import run_surveillance
 from .lob import OrderEvent
 from .simulate import generate_market_session
+from .store import AlertStore
+
+settings = ops.load_settings()
+ops.setup_logging(settings.log_level)
+store = AlertStore(db.connect(settings.database_url))
 
 app = FastAPI(
     title="mktsurv — Level-3 Market Manipulation Surveillance Engine",
@@ -40,26 +49,12 @@ app = FastAPI(
     ),
 )
 
+ops.install(app, settings, {"database": lambda: store.db.connect().close()})
+
 WEB_CONSOLE_PATH = Path(__file__).resolve().parent.parent / "web" / "console.html"
-API_KEY = os.environ.get("MKTSURV_API_KEY")
-MAX_BODY_BYTES = 2_000_000
 # The book rescans its levels on every event and the wash detector is quadratic in fills,
 # so a single request is capped well below what a real session would hold.
 MAX_EVENTS = 5_000
-
-
-def require_key(x_api_key: str | None = Header(default=None)) -> None:
-    if API_KEY and not hmac.compare_digest(x_api_key or "", API_KEY):
-        raise HTTPException(401, "missing or wrong X-API-Key")
-
-
-@app.middleware("http")
-async def limit_body(request: Request, call_next):
-    if request.method == "POST":
-        length = request.headers.get("content-length", "")
-        if not length.isdigit() or int(length) > MAX_BODY_BYTES:
-            return JSONResponse({"detail": "body missing Content-Length or over 2 MB"}, status_code=413)
-    return await call_next(request)
 
 
 class OrderEventPayload(BaseModel):
@@ -107,18 +102,14 @@ def get_console() -> HTMLResponse:
     )
 
 
-@app.get("/health")
-def get_health() -> Dict[str, Any]:
-    return {
-        "status": "ok",
-        "package": "mktsurv",
-        "version": "1.0.0",
-        "port": 8015,
-    }
+class ReviewRequest(BaseModel):
+    status: Literal["open", "escalated", "dismissed"]
+    note: str = Field(..., min_length=2, max_length=2000)
 
 
-@app.post("/surveil", dependencies=[Depends(require_key)])
-def post_surveil(req: SurveilRequest) -> Dict[str, Any]:
+@app.post("/surveil")
+def post_surveil(req: SurveilRequest, ident: dict = Depends(ops.require("surveil"))) -> Dict[str, Any]:
+    submitted = bool(req.events)
     if req.events is not None and len(req.events) > 0:
         order_events = [
             OrderEvent(
@@ -153,14 +144,47 @@ def post_surveil(req: SurveilRequest) -> Dict[str, Any]:
     latest_snap = lob.snapshot(
         timestamp_ms=order_events[-1].timestamp_ms if order_events else 0
     )
+    alerts = [a.to_dict() for a in report.unified_alerts]
+    for a in alerts:
+        ops.DECISIONS.labels(decision=a["pattern"]).inc()
+    run_id = alert_ids = None
+    if submitted:  # the built-in simulated session is a demo; only real order flow is kept
+        run_id, alert_ids = store.record(ident["user"] or "demo", req.symbol, len(order_events), alerts)
     return {
+        "run_id": run_id,
+        "stored_alert_ids": alert_ids,
         "report": report.to_dict(),
         "book_snapshot": latest_snap.to_dict(),
         "snapshots": [s.to_dict() for s in lob.snapshots[-40:]],
     }
 
 
-@app.get("/episodes", dependencies=[Depends(require_key)])
+@app.get("/alerts", dependencies=[Depends(ops.require("read"))])
+def list_alerts(status: Optional[Literal["open", "escalated", "dismissed"]] = None,
+                symbol: Optional[str] = Query(None, max_length=16),
+                limit: int = Query(100, ge=1, le=1000)) -> Dict[str, Any]:
+    rows = store.list(status, symbol, limit)
+    return {"count": len(rows), "alerts": rows}
+
+
+@app.get("/alerts/{alert_id}", dependencies=[Depends(ops.require("read"))])
+def get_alert(alert_id: str) -> Dict[str, Any]:
+    row = store.get(alert_id[:64])
+    if row is None:
+        raise HTTPException(404, "alert not found")
+    return row
+
+
+@app.post("/alerts/{alert_id}/review")
+def review_alert(alert_id: str, body: ReviewRequest, ident: dict = Depends(ops.require("review"))) -> Dict[str, Any]:
+    row = store.review(alert_id[:64], ident["user"] or "demo", body.status, body.note)
+    if row is None:
+        raise HTTPException(404, "alert not found")
+    ops.DECISIONS.labels(decision=f"review_{body.status}").inc()
+    return row
+
+
+@app.get("/episodes", dependencies=[Depends(ops.require("read"))])
 def list_episodes() -> Dict[str, Any]:
     state = _get_cached_session_state()
     scenario = state["scenario"]
@@ -196,7 +220,7 @@ def list_episodes() -> Dict[str, Any]:
     }
 
 
-@app.get("/episodes/{episode_id}", dependencies=[Depends(require_key)])
+@app.get("/episodes/{episode_id}", dependencies=[Depends(ops.require("read"))])
 def get_episode_detail(episode_id: str) -> Dict[str, Any]:
     state = _get_cached_session_state()
     scenario = state["scenario"]
@@ -208,7 +232,7 @@ def get_episode_detail(episode_id: str) -> Dict[str, Any]:
         None,
     )
     if target_ep is None:
-        raise HTTPException(status_code=404, detail=f"Episode '{episode_id}' not found")
+        raise HTTPException(status_code=404, detail="episode not found")
 
     pad_ms = 5_000
     w_start = max(0, target_ep.start_ts_ms - pad_ms)
@@ -250,7 +274,7 @@ def get_episode_detail(episode_id: str) -> Dict[str, Any]:
     }
 
 
-@app.get("/bench", dependencies=[Depends(require_key)])
+@app.get("/bench", dependencies=[Depends(ops.require("read"))])
 def get_bench() -> Dict[str, Any]:
     return _cached_bench()
 
