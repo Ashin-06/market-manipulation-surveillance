@@ -9,7 +9,7 @@ The benchmark below comes from a built-in simulator. "Real data" further down ru
 **Order book** (`lob.py`). A single-instrument book with price-time priority. It tracks each order's fills, cancels, time-to-cancel and distance from the touch, plus the book imbalance (OBI) when the order was placed. It reports mid, micro-price and spread. Events with unknown types or sides, non-finite or negative prices, non-positive quantities or reused order IDs are rejected. (A NaN-priced limit order used to trade like a market order.)
 
 **Detectors** (`detectors.py`, `vpin.py`). All are threshold rules with hand-set parameters. Sizes are not in shares but in multiples of the instrument's *typical size*: the volume-weighted median of the order or fill sizes in the data being checked (half of all volume goes through pieces that size or smaller). A plain median would not work, since most Nasdaq fills are 100 shares whether the stock costs $27 or $580. What differs is how big the large ones get: the typical fill is about 650 shares on INTC and MSFT, and 100 on AAPL, AMZN and GOOG.
-- *Spoofing / layering.* A trader rests at least 5× the typical order size on one side while book imbalance toward that side exceeds 0.55, trades on the other side, then cancels more than 80% of the resting orders within 2 seconds of that trade. Two or more price levels count as layering.
+- *Spoofing / layering.* A trader rests at least 5× the typical order size on one side while book imbalance toward that side exceeds 0.55, trades on the other side, then cancels more than 80% of the resting orders within 2 seconds of that trade. The trader must also be one-sided: the resting volume is at least 3× the trader's own orders live on the trade's side. A market maker also pulls a big quote right after a fill on the other side, but it rests about as much on that side. Two or more price levels count as layering.
 - *Wash trading.* Covers self-trades (same trader or account on both sides) and 2- and 3-party loops within 60 seconds whose net position change is under 5% of gross. A loop is reported only with evidence of prearrangement: a shared IP; or else every leg traded at least twice, or all legs the same size at one price (matched orders), *and* the loop making up at least half of each member's trading in the window. Without the first rule, chance loops among unrelated retail traders were flagged 111 times in 200 sessions. Without the second, busy accounts in real order flow trade with each other in equal round lots all the time (see Real data).
 - *Marking the close.* One trader's aggressive orders make up over 40% of volume in the last 120 seconds and move the close more than 35 bps from the preceding 15-minute VWAP.
 - *Front-running.* A trader builds a position in the 15 seconds before a block (at least 3× the typical fill) from someone else, then unwinds at least 60% of it into the block at an edge of 8 bps or more. The position must be at least half the typical fill and at least half of all volume traded in those 15 seconds. VPIN (Easley, López de Prado and O'Hara) is reported alongside the alert but is not part of the rule.
@@ -41,24 +41,28 @@ Every injected episode was detected: spoof 122/122, layer 112/112, self-trade 12
 2. A front-running position must also be at least half of the volume traded in the 15 seconds before the block.
 3. A wash loop must be at least half of each member's trading in the window.
 4. Matched wash-loop legs must also be at one price.
+5. A spoofer must be one-sided (see Detectors).
 
-Changes 1–3 were tuned on the simulator and on INTC (one random attribution), so **INTC is in-sample**. On the held-out AAPL, AMZN, GOOG and MSFT, front-running and spoofing improved. Chance two-party loops rose on the three expensive stocks, though (AAPL with 50 traders: 0.04 to 0.12 per trader-hour), because twice their 100-share typical fill is just two round lots. Change 4 came from looking at those AAPL loops: 27 of 29 were one 100-share lot each way, at two different prices. It has no tuned number, but it was made after seeing the first results on every stock, so for the wash rule no stock is a clean hold-out.
+How they were chosen, and what is in-sample:
+- **Changes 1–3** were tuned on the simulator and on INTC (one random attribution), so **INTC is in-sample**. On the held-out AAPL, AMZN, GOOG and MSFT, front-running and spoofing improved. Chance two-party loops rose on the three expensive stocks, though (AAPL with 50 traders: 0.04 to 0.12 per trader-hour), because twice their 100-share typical fill is just two round lots.
+- **Change 4** came from looking at those AAPL loops: 27 of 29 were one 100-share lot each way, at two different prices. It has no tuned number, but it was made after seeing the first results on every stock, so for the wash rule no stock is a clean hold-out.
+- **Change 5** was tuned on AAPL. Its chance spoofs look just like the simulated ones: about 400 ms from placement to trade, the resting order 9× the trade. What sets them apart is that the pseudo-trader also rests plenty on the other side. The ratio of 3 was picked from AAPL's counts at 0, 2, 3 and 5; simulated spoofs pass up to 8. For spoofing, AMZN, GOOG and MSFT are held out. With ten traders their spoofing and layering alerts went from 21, 3 and 5 a day to 3, 1 and 0.
 
-False alerts per trader-hour, all detectors (shares → round 1 → now):
+False alerts per trader-hour, all detectors (thresholds in shares → now):
 
 | Stock (price) | 10 traders | 50 traders | 200 traders |
 |---|---|---|---|
-| AAPL ($582) | 19 → 0.99 → 0.78 | 0.041 → 0.12 → 0.039 | 0.003 → 0.007 → 0.002 |
-| AMZN ($223) | 1.5 → 1.1 → 0.59 | 0.021 → 0.053 → 0.021 | 0.0003 → 0.002 → 0.0005 |
-| GOOG ($569) | 1.1 → 0.75 → 0.13 | 0.007 → 0.035 → 0.011 | 0.0008 → 0.002 → 0.0008 |
-| INTC ($27), in-sample | 17 → 0.24 → 0.23 | 0.93 → 0.004 → 0.004 | 0.22 → 0 → 0 |
-| MSFT ($31) | 18 → 0.19 → 0.18 | 1.4 → 0.005 → 0.004 | 0.19 → 0.0005 → 0.0005 |
+| AAPL ($582), in-sample for changes 4–5 | 19 → 0.26 | 0.041 → 0.028 | 0.003 → 0.002 |
+| AMZN ($223) | 1.5 → 0.31 | 0.021 → 0.018 | 0.0003 → 0.0005 |
+| GOOG ($569) | 1.1 → 0.10 | 0.007 → 0.006 | 0.0008 → 0.0005 |
+| INTC ($27), in-sample | 17 → 0.09 | 0.93 → 0.001 | 0.22 → 0 |
+| MSFT ($31) | 18 → 0.11 | 1.4 → 0.004 | 0.19 → 0.0005 |
 
 What the real data shows now:
-- **Price level no longer drives the counts the way it did.** With 200 traders every stock is at 0–0.002 false alerts per trader-hour (at most about 3 a day), against 0.19–0.22 for INTC and MSFT before. Front-running on INTC and MSFT with 50 or 200 traders went from 240–390 a day to 0–1.3 (MSFT held out).
-- **It isn't flat, though: AAPL is now the noisiest.** At 50 traders INTC and MSFT are at 0.004 and AAPL at 0.039. GOOG, at almost the same price as AAPL, is at 0.011, so this is AAPL's own order flow rather than its price. Most of the gap is spoofing on AAPL (10 a day at 50 traders, 45 at ten): single orders of about 1,000 shares, ten times AAPL's usual order, cancelled within 2 seconds of a trade on the other side. Such orders are large for AAPL too, so scaling the sizes doesn't remove them. They become alerts because the random attribution gives the opposite trade to the same pseudo-trader, and only real account data can show whether that happens in reality.
+- **Price level no longer drives the counts.** With 200 traders every stock is at 0–0.002 false alerts per trader-hour (at most about 2 a day), against 0.19–0.22 for INTC and MSFT before. Front-running on INTC and MSFT with 50 or 200 traders went from 240–390 a day to 0–1.3 (MSFT held out). With ten traders the five stocks span 0.09–0.31, not 1.1–19, in no price order.
+- **AAPL is still the noisiest at 50 traders**: 0.028, against 0.001–0.006 for INTC, MSFT and GOOG (GOOG costs about as much as AAPL). The rest is mostly spoofing, 6 a day: single orders of about 1,000 shares, ten times AAPL's usual order, cancelled within 2 seconds of a trade on the other side by a pseudo-trader that holds little on that side. Only real account data can show whether such coincidences happen with real owners.
 - **Wash loops with ten traders** are down from 65–1,213 a day to 1–7. Loops between busy accounts no longer qualify, because they are a small share of each account's trading, and the self-trade artifact is gone.
-- **Ten traders is still noisy**: 0.13–0.78 per trader-hour, mostly spoofing, layering and (on AMZN) front-running. When a few accounts share a whole stock's flow, their trades and cancels line up by chance.
+- **What is left with ten traders**: front-running (5–10 a day on AMZN, INTC and MSFT), chance two-party loops (1–7) and spoofing on AAPL (11). When a few accounts share a whole stock's flow, their trades line up by chance.
 - **Marking the close** never fired, but there are only five closes here.
 - **The order-to-trade baseline** flags 0–80% of trader-windows, depending mostly on the stock rather than on behaviour.
 
@@ -68,7 +72,7 @@ Using this on real flow would still need real account attribution. Nasdaq's publ
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                    # 14 tests
+python -m pytest -q                    # 15 tests
 python -m mktsurv bench                # single session + 200-session sweep
 python -m mktsurv realdata --data DIR  # LOBSTER sample files, about 7 minutes
 python -m mktsurv serve --port 8015    # API + console at http://127.0.0.1:8015

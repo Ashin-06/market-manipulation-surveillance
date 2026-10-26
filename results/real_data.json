@@ -20,14 +20,14 @@
         "traded_shares": 2769239,
         "trader_hours": 65.0,
         "alerts_total_by_seed": [
-          51,
-          51,
-          50
+          16,
+          17,
+          17
         ],
-        "alerts_per_trader_hour": 0.7795,
+        "alerts_per_trader_hour": 0.2565,
         "alerts_mean": {
-          "SPOOFING": 33.67,
-          "LAYERING": 11.0,
+          "SPOOFING": 8.67,
+          "LAYERING": 2.0,
           "WASH_TRADING": 5.67,
           "MARKING_THE_CLOSE": 0.0,
           "FRONT_RUNNING": 0.33
@@ -36,29 +36,9 @@
           "COLLUSIVE_WASH_RING_2HOP": 5.0,
           "COLLUSIVE_WASH_RING_3HOP": 0.67
         },
-        "flagged_share_of_trader_windows": 0.1628,
+        "flagged_share_of_trader_windows": 0.0731,
         "otr_flagged_share_of_trader_windows": 0.0,
         "examples": [
-          {
-            "alert_id": "SPF-0001",
-            "detector": "SPOOFING",
-            "trader_id": "T009",
-            "account_id": "ACCT-T009",
-            "ip_address": "10.0.9.1",
-            "spoof_side": "SELL",
-            "exec_side": "BUY",
-            "start_ts_ms": 35099005,
-            "exec_ts_ms": 35099005,
-            "cancel_ts_ms": 35099859,
-            "spoof_levels_count": 1,
-            "spoof_total_qty": 1000,
-            "spoof_canceled_qty": 1000,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 854,
-            "peak_directional_obi": 0.7194,
-            "opposite_exec_qty": 60,
-            "confidence": 0.8978
-          },
           {
             "alert_id": "SPF-0001",
             "detector": "SPOOFING",
@@ -82,45 +62,25 @@
           {
             "alert_id": "SPF-0002",
             "detector": "SPOOFING",
-            "trader_id": "T000",
-            "account_id": "ACCT-T000",
-            "ip_address": "10.0.0.1",
-            "spoof_side": "BUY",
-            "exec_side": "SELL",
-            "start_ts_ms": 35393690,
-            "exec_ts_ms": 35393690,
-            "cancel_ts_ms": 35393777,
+            "trader_id": "T005",
+            "account_id": "ACCT-T005",
+            "ip_address": "10.0.5.1",
+            "spoof_side": "SELL",
+            "exec_side": "BUY",
+            "start_ts_ms": 35148098,
+            "exec_ts_ms": 35151962,
+            "cancel_ts_ms": 35152888,
             "spoof_levels_count": 1,
-            "spoof_total_qty": 1000,
-            "spoof_canceled_qty": 1000,
+            "spoof_total_qty": 1100,
+            "spoof_canceled_qty": 1100,
             "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 87,
-            "peak_directional_obi": 0.5787,
-            "opposite_exec_qty": 648,
-            "confidence": 0.8415
+            "post_fill_cancel_delay_ms": 926,
+            "peak_directional_obi": 0.6655,
+            "opposite_exec_qty": 100,
+            "confidence": 0.8762
           },
           {
             "alert_id": "SPF-0001",
-            "detector": "SPOOFING",
-            "trader_id": "T000",
-            "account_id": "ACCT-T000",
-            "ip_address": "10.0.0.1",
-            "spoof_side": "BUY",
-            "exec_side": "SELL",
-            "start_ts_ms": 36006256,
-            "exec_ts_ms": 36007243,
-            "cancel_ts_ms": 36008714,
-            "spoof_levels_count": 1,
-            "spoof_total_qty": 1000,
-            "spoof_canceled_qty": 1000,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 1471,
-            "peak_directional_obi": 0.7506,
-            "opposite_exec_qty": 14,
-            "confidence": 0.9102
-          },
-          {
-            "alert_id": "SPF-0002",
             "detector": "SPOOFING",
             "trader_id": "T001",
             "account_id": "ACCT-T001",
@@ -140,24 +100,24 @@
             "confidence": 0.8535
           },
           {
-            "alert_id": "SPF-0001",
+            "alert_id": "SPF-0002",
             "detector": "LAYERING",
-            "trader_id": "T005",
-            "account_id": "ACCT-T005",
-            "ip_address": "10.0.5.1",
-            "spoof_side": "BUY",
-            "exec_side": "SELL",
-            "start_ts_ms": 37548684,
-            "exec_ts_ms": 37554279,
-            "cancel_ts_ms": 37554348,
+            "trader_id": "T001",
+            "account_id": "ACCT-T001",
+            "ip_address": "10.0.1.1",
+            "spoof_side": "SELL",
+            "exec_side": "BUY",
+            "start_ts_ms": 36028606,
+            "exec_ts_ms": 36029384,
+            "cancel_ts_ms": 36031265,
             "spoof_levels_count": 2,
             "spoof_total_qty": 1100,
             "spoof_canceled_qty": 1100,
             "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 69,
-            "peak_directional_obi": 0.6808,
-            "opposite_exec_qty": 225,
-            "confidence": 0.9123
+            "post_fill_cancel_delay_ms": 1881,
+            "peak_directional_obi": 0.6348,
+            "opposite_exec_qty": 177,
+            "confidence": 0.8939
           },
           {
             "alert_id": "WSH-0001",
@@ -184,84 +144,55 @@
             "confidence": 0.9
           },
           {
-            "alert_id": "SPF-0001",
-            "detector": "LAYERING",
-            "trader_id": "T006",
-            "account_id": "ACCT-T006",
-            "ip_address": "10.0.6.1",
-            "spoof_side": "SELL",
-            "exec_side": "BUY",
-            "start_ts_ms": 39129951,
-            "exec_ts_ms": 39137033,
-            "cancel_ts_ms": 39137371,
-            "spoof_levels_count": 2,
-            "spoof_total_qty": 1000,
-            "spoof_canceled_qty": 931,
-            "spoof_cancel_ratio": 0.931,
-            "post_fill_cancel_delay_ms": 338,
-            "peak_directional_obi": 0.6567,
-            "opposite_exec_qty": 460,
-            "confidence": 0.8958
+            "alert_id": "WSH-0001",
+            "detector": "COLLUSIVE_WASH_RING_2HOP",
+            "traders": [
+              "T003",
+              "T005"
+            ],
+            "accounts": [
+              "ACCT-T003",
+              "ACCT-T005"
+            ],
+            "ip_addresses": [
+              "10.0.3.1",
+              "10.0.5.1"
+            ],
+            "start_ts_ms": 39053992,
+            "end_ts_ms": 39091453,
+            "gross_volume": 420,
+            "net_inventory_change": 20,
+            "net_to_gross_ratio": 0.0476,
+            "fill_count": 6,
+            "shared_ip": false,
+            "confidence": 0.9
           },
           {
-            "alert_id": "SPF-0002",
-            "detector": "SPOOFING",
-            "trader_id": "T003",
-            "account_id": "ACCT-T003",
-            "ip_address": "10.0.3.1",
-            "spoof_side": "SELL",
-            "exec_side": "BUY",
-            "start_ts_ms": 39114887,
-            "exec_ts_ms": 39115029,
-            "cancel_ts_ms": 39116998,
-            "spoof_levels_count": 1,
-            "spoof_total_qty": 500,
-            "spoof_canceled_qty": 500,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 1969,
-            "peak_directional_obi": 0.7677,
-            "opposite_exec_qty": 9,
-            "confidence": 0.9171
-          },
-          {
-            "alert_id": "SPF-0001",
-            "detector": "SPOOFING",
-            "trader_id": "T005",
-            "account_id": "ACCT-T005",
-            "ip_address": "10.0.5.1",
-            "spoof_side": "BUY",
-            "exec_side": "SELL",
-            "start_ts_ms": 44780372,
-            "exec_ts_ms": 44780990,
-            "cancel_ts_ms": 44782516,
-            "spoof_levels_count": 1,
-            "spoof_total_qty": 1871,
-            "spoof_canceled_qty": 1871,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 1526,
-            "peak_directional_obi": 0.8615,
-            "opposite_exec_qty": 80,
-            "confidence": 0.93
-          },
-          {
-            "alert_id": "SPF-0002",
-            "detector": "SPOOFING",
-            "trader_id": "T008",
-            "account_id": "ACCT-T008",
-            "ip_address": "10.0.8.1",
-            "spoof_side": "BUY",
-            "exec_side": "SELL",
-            "start_ts_ms": 44983102,
-            "exec_ts_ms": 44983105,
-            "cancel_ts_ms": 44983136,
-            "spoof_levels_count": 1,
-            "spoof_total_qty": 600,
-            "spoof_canceled_qty": 600,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 31,
-            "peak_directional_obi": 0.5658,
-            "opposite_exec_qty": 92,
-            "confidence": 0.8363
+            "alert_id": "WSH-0002",
+            "detector": "COLLUSIVE_WASH_RING_3HOP",
+            "traders": [
+              "T003",
+              "T008",
+              "T005"
+            ],
+            "accounts": [
+              "ACCT-T003",
+              "ACCT-T008",
+              "ACCT-T005"
+            ],
+            "ip_addresses": [
+              "10.0.3.1",
+              "10.0.5.1",
+              "10.0.8.1"
+            ],
+            "start_ts_ms": 39551095,
+            "end_ts_ms": 39588107,
+            "gross_volume": 600,
+            "net_inventory_change": 0,
+            "net_to_gross_ratio": 0.0,
+            "fill_count": 6,
+            "shared_ip": false,
+            "confidence": 0.95
           },
           {
             "alert_id": "WSH-0001",
@@ -286,6 +217,78 @@
             "fill_count": 5,
             "shared_ip": false,
             "confidence": 0.9
+          },
+          {
+            "alert_id": "WSH-0002",
+            "detector": "COLLUSIVE_WASH_RING_2HOP",
+            "traders": [
+              "T001",
+              "T003"
+            ],
+            "accounts": [
+              "ACCT-T001",
+              "ACCT-T003"
+            ],
+            "ip_addresses": [
+              "10.0.1.1",
+              "10.0.3.1"
+            ],
+            "start_ts_ms": 45777172,
+            "end_ts_ms": 45834357,
+            "gross_volume": 1012,
+            "net_inventory_change": 12,
+            "net_to_gross_ratio": 0.0119,
+            "fill_count": 4,
+            "shared_ip": false,
+            "confidence": 0.9
+          },
+          {
+            "alert_id": "WSH-0001",
+            "detector": "COLLUSIVE_WASH_RING_2HOP",
+            "traders": [
+              "T002",
+              "T004"
+            ],
+            "accounts": [
+              "ACCT-T002",
+              "ACCT-T004"
+            ],
+            "ip_addresses": [
+              "10.0.2.1",
+              "10.0.4.1"
+            ],
+            "start_ts_ms": 48327721,
+            "end_ts_ms": 48384007,
+            "gross_volume": 211,
+            "net_inventory_change": 3,
+            "net_to_gross_ratio": 0.0142,
+            "fill_count": 4,
+            "shared_ip": false,
+            "confidence": 0.9
+          },
+          {
+            "alert_id": "WSH-0001",
+            "detector": "COLLUSIVE_WASH_RING_2HOP",
+            "traders": [
+              "T001",
+              "T009"
+            ],
+            "accounts": [
+              "ACCT-T001",
+              "ACCT-T009"
+            ],
+            "ip_addresses": [
+              "10.0.1.1",
+              "10.0.9.1"
+            ],
+            "start_ts_ms": 52360427,
+            "end_ts_ms": 52396687,
+            "gross_volume": 399,
+            "net_inventory_change": 1,
+            "net_to_gross_ratio": 0.0025,
+            "fill_count": 4,
+            "shared_ip": false,
+            "confidence": 0.9
           }
         ]
       },
@@ -300,14 +303,14 @@
         "traded_shares": 2769239,
         "trader_hours": 325.0,
         "alerts_total_by_seed": [
-          13,
-          15,
-          10
+          10,
+          11,
+          6
         ],
-        "alerts_per_trader_hour": 0.039,
+        "alerts_per_trader_hour": 0.0277,
         "alerts_mean": {
-          "SPOOFING": 9.33,
-          "LAYERING": 0.67,
+          "SPOOFING": 6.0,
+          "LAYERING": 0.33,
           "WASH_TRADING": 2.33,
           "MARKING_THE_CLOSE": 0.0,
           "FRONT_RUNNING": 0.33
@@ -315,7 +318,7 @@
         "wash_by_type_mean": {
           "COLLUSIVE_WASH_RING_2HOP": 2.33
         },
-        "flagged_share_of_trader_windows": 0.0115,
+        "flagged_share_of_trader_windows": 0.0087,
         "otr_flagged_share_of_trader_windows": 0.0221,
         "examples": [
           {
@@ -465,46 +468,6 @@
             "fill_count": 2,
             "shared_ip": false,
             "confidence": 0.9
-          },
-          {
-            "alert_id": "SPF-0001",
-            "detector": "SPOOFING",
-            "trader_id": "T018",
-            "account_id": "ACCT-T018",
-            "ip_address": "10.0.18.1",
-            "spoof_side": "BUY",
-            "exec_side": "SELL",
-            "start_ts_ms": 52000158,
-            "exec_ts_ms": 52001496,
-            "cancel_ts_ms": 52001642,
-            "spoof_levels_count": 1,
-            "spoof_total_qty": 500,
-            "spoof_canceled_qty": 500,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 146,
-            "peak_directional_obi": 0.5598,
-            "opposite_exec_qty": 200,
-            "confidence": 0.8339
-          },
-          {
-            "alert_id": "SPF-0001",
-            "detector": "SPOOFING",
-            "trader_id": "T046",
-            "account_id": "ACCT-T046",
-            "ip_address": "10.0.46.1",
-            "spoof_side": "BUY",
-            "exec_side": "SELL",
-            "start_ts_ms": 57562526,
-            "exec_ts_ms": 57571242,
-            "cancel_ts_ms": 57572233,
-            "spoof_levels_count": 1,
-            "spoof_total_qty": 2000,
-            "spoof_canceled_qty": 2000,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 991,
-            "peak_directional_obi": 0.6608,
-            "opposite_exec_qty": 300,
-            "confidence": 0.8743
           }
         ]
       },
@@ -521,18 +484,18 @@
         "alerts_total_by_seed": [
           2,
           2,
-          4
+          3
         ],
-        "alerts_per_trader_hour": 0.0021,
+        "alerts_per_trader_hour": 0.0018,
         "alerts_mean": {
-          "SPOOFING": 2.67,
+          "SPOOFING": 2.33,
           "LAYERING": 0.0,
           "WASH_TRADING": 0.0,
           "MARKING_THE_CLOSE": 0.0,
           "FRONT_RUNNING": 0.0
         },
         "wash_by_type_mean": {},
-        "flagged_share_of_trader_windows": 0.0005,
+        "flagged_share_of_trader_windows": 0.0004,
         "otr_flagged_share_of_trader_windows": 0.1537,
         "examples": [
           {
@@ -590,14 +553,14 @@
         "traded_shares": 800134,
         "trader_hours": 65.0,
         "alerts_total_by_seed": [
-          45,
-          28,
-          42
+          25,
+          11,
+          24
         ],
-        "alerts_per_trader_hour": 0.5897,
+        "alerts_per_trader_hour": 0.3077,
         "alerts_mean": {
-          "SPOOFING": 9.33,
-          "LAYERING": 12.0,
+          "SPOOFING": 1.33,
+          "LAYERING": 1.67,
           "WASH_TRADING": 7.33,
           "MARKING_THE_CLOSE": 0.0,
           "FRONT_RUNNING": 9.67
@@ -605,29 +568,9 @@
         "wash_by_type_mean": {
           "COLLUSIVE_WASH_RING_2HOP": 7.33
         },
-        "flagged_share_of_trader_windows": 0.1526,
+        "flagged_share_of_trader_windows": 0.0974,
         "otr_flagged_share_of_trader_windows": 0.3474,
         "examples": [
-          {
-            "alert_id": "SPF-0001",
-            "detector": "SPOOFING",
-            "trader_id": "T004",
-            "account_id": "ACCT-T004",
-            "ip_address": "10.0.4.1",
-            "spoof_side": "SELL",
-            "exec_side": "BUY",
-            "start_ts_ms": 34204652,
-            "exec_ts_ms": 34212165,
-            "cancel_ts_ms": 34212165,
-            "spoof_levels_count": 1,
-            "spoof_total_qty": 1100,
-            "spoof_canceled_qty": 900,
-            "spoof_cancel_ratio": 0.8182,
-            "post_fill_cancel_delay_ms": 0,
-            "peak_directional_obi": 0.7243,
-            "opposite_exec_qty": 203,
-            "confidence": 0.8815
-          },
           {
             "alert_id": "FR-0001",
             "detector": "FRONT_RUNNING",
@@ -732,26 +675,6 @@
             "confidence": 0.9005
           },
           {
-            "alert_id": "SPF-0001",
-            "detector": "LAYERING",
-            "trader_id": "T003",
-            "account_id": "ACCT-T003",
-            "ip_address": "10.0.3.1",
-            "spoof_side": "SELL",
-            "exec_side": "BUY",
-            "start_ts_ms": 39138156,
-            "exec_ts_ms": 39138452,
-            "cancel_ts_ms": 39138835,
-            "spoof_levels_count": 3,
-            "spoof_total_qty": 511,
-            "spoof_canceled_qty": 511,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 383,
-            "peak_directional_obi": 0.6503,
-            "opposite_exec_qty": 22,
-            "confidence": 0.9301
-          },
-          {
             "alert_id": "FR-0001",
             "detector": "FRONT_RUNNING",
             "trader_id": "T005",
@@ -771,6 +694,27 @@
             "realized_pnl": 49.44,
             "vpin_at_event": 0.7715,
             "confidence": 0.9612
+          },
+          {
+            "alert_id": "FR-0002",
+            "detector": "FRONT_RUNNING",
+            "trader_id": "T006",
+            "account_id": "ACCT-T006",
+            "ip_address": "10.0.6.1",
+            "victim_trader_id": "T004",
+            "direction": "BUY",
+            "start_ts_ms": 39106867,
+            "end_ts_ms": 39121790,
+            "pre_accumulated_qty": 500,
+            "block_sweep_qty": 400,
+            "unwound_qty": 540,
+            "unwind_ratio": 1.08,
+            "avg_entry_price": 224.5,
+            "avg_exit_price": 224.8704,
+            "realized_edge_bps": 16.5,
+            "realized_pnl": 185.2,
+            "vpin_at_event": 0.8315,
+            "confidence": 0.955
           },
           {
             "alert_id": "FR-0001",
@@ -816,26 +760,6 @@
           },
           {
             "alert_id": "SPF-0001",
-            "detector": "LAYERING",
-            "trader_id": "T007",
-            "account_id": "ACCT-T007",
-            "ip_address": "10.0.7.1",
-            "spoof_side": "BUY",
-            "exec_side": "SELL",
-            "start_ts_ms": 41960270,
-            "exec_ts_ms": 41966575,
-            "cancel_ts_ms": 41968019,
-            "spoof_levels_count": 4,
-            "spoof_total_qty": 609,
-            "spoof_canceled_qty": 609,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 1444,
-            "peak_directional_obi": 0.7472,
-            "opposite_exec_qty": 100,
-            "confidence": 0.9689
-          },
-          {
-            "alert_id": "SPF-0002",
             "detector": "SPOOFING",
             "trader_id": "T004",
             "account_id": "ACCT-T004",
@@ -853,6 +777,51 @@
             "peak_directional_obi": 0.9639,
             "opposite_exec_qty": 20,
             "confidence": 0.9261
+          },
+          {
+            "alert_id": "FR-0001",
+            "detector": "FRONT_RUNNING",
+            "trader_id": "T003",
+            "account_id": "ACCT-T003",
+            "ip_address": "10.0.3.1",
+            "victim_trader_id": "T004",
+            "direction": "SELL",
+            "start_ts_ms": 42036596,
+            "end_ts_ms": 42057627,
+            "pre_accumulated_qty": 50,
+            "block_sweep_qty": 384,
+            "unwound_qty": 320,
+            "unwind_ratio": 6.4,
+            "avg_entry_price": 223.48,
+            "avg_exit_price": 223.2569,
+            "realized_edge_bps": 9.98,
+            "realized_pnl": 11.16,
+            "vpin_at_event": 0.671,
+            "confidence": 0.9291
+          },
+          {
+            "alert_id": "WSH-0001",
+            "detector": "COLLUSIVE_WASH_RING_2HOP",
+            "traders": [
+              "T000",
+              "T002"
+            ],
+            "accounts": [
+              "ACCT-T000",
+              "ACCT-T002"
+            ],
+            "ip_addresses": [
+              "10.0.0.1",
+              "10.0.2.1"
+            ],
+            "start_ts_ms": 43225463,
+            "end_ts_ms": 43262469,
+            "gross_volume": 400,
+            "net_inventory_change": 0,
+            "net_to_gross_ratio": 0.0,
+            "fill_count": 5,
+            "shared_ip": false,
+            "confidence": 0.9
           }
         ]
       },
@@ -867,14 +836,14 @@
         "traded_shares": 800134,
         "trader_hours": 325.0,
         "alerts_total_by_seed": [
+          5,
           6,
-          6,
-          8
+          7
         ],
-        "alerts_per_trader_hour": 0.0205,
+        "alerts_per_trader_hour": 0.0185,
         "alerts_mean": {
-          "SPOOFING": 1.67,
-          "LAYERING": 1.0,
+          "SPOOFING": 1.33,
+          "LAYERING": 0.67,
           "WASH_TRADING": 0.67,
           "MARKING_THE_CLOSE": 0.0,
           "FRONT_RUNNING": 3.33
@@ -882,7 +851,7 @@
         "wash_by_type_mean": {
           "COLLUSIVE_WASH_RING_2HOP": 0.67
         },
-        "flagged_share_of_trader_windows": 0.0056,
+        "flagged_share_of_trader_windows": 0.0051,
         "otr_flagged_share_of_trader_windows": 0.459,
         "examples": [
           {
@@ -972,26 +941,6 @@
           {
             "alert_id": "SPF-0001",
             "detector": "SPOOFING",
-            "trader_id": "T048",
-            "account_id": "ACCT-T048",
-            "ip_address": "10.0.48.1",
-            "spoof_side": "BUY",
-            "exec_side": "SELL",
-            "start_ts_ms": 50722734,
-            "exec_ts_ms": 50722734,
-            "cancel_ts_ms": 50722735,
-            "spoof_levels_count": 1,
-            "spoof_total_qty": 600,
-            "spoof_canceled_qty": 600,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 1,
-            "peak_directional_obi": 0.7858,
-            "opposite_exec_qty": 100,
-            "confidence": 0.9243
-          },
-          {
-            "alert_id": "SPF-0001",
-            "detector": "SPOOFING",
             "trader_id": "T032",
             "account_id": "ACCT-T032",
             "ip_address": "10.0.32.1",
@@ -1073,14 +1022,14 @@
         "traded_shares": 693757,
         "trader_hours": 65.0,
         "alerts_total_by_seed": [
+          6,
           8,
-          11,
-          7
+          6
         ],
-        "alerts_per_trader_hour": 0.1334,
+        "alerts_per_trader_hour": 0.1026,
         "alerts_mean": {
-          "SPOOFING": 2.0,
-          "LAYERING": 1.0,
+          "SPOOFING": 0.67,
+          "LAYERING": 0.33,
           "WASH_TRADING": 4.0,
           "MARKING_THE_CLOSE": 0.0,
           "FRONT_RUNNING": 1.67
@@ -1088,29 +1037,9 @@
         "wash_by_type_mean": {
           "COLLUSIVE_WASH_RING_2HOP": 4.0
         },
-        "flagged_share_of_trader_windows": 0.0474,
+        "flagged_share_of_trader_windows": 0.041,
         "otr_flagged_share_of_trader_windows": 0.0333,
         "examples": [
-          {
-            "alert_id": "SPF-0001",
-            "detector": "SPOOFING",
-            "trader_id": "T004",
-            "account_id": "ACCT-T004",
-            "ip_address": "10.0.4.1",
-            "spoof_side": "SELL",
-            "exec_side": "BUY",
-            "start_ts_ms": 34212205,
-            "exec_ts_ms": 34212205,
-            "cancel_ts_ms": 34212205,
-            "spoof_levels_count": 1,
-            "spoof_total_qty": 1278,
-            "spoof_canceled_qty": 1278,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 0,
-            "peak_directional_obi": 0.8722,
-            "opposite_exec_qty": 15,
-            "confidence": 0.93
-          },
           {
             "alert_id": "FR-0001",
             "detector": "FRONT_RUNNING",
@@ -1175,26 +1104,6 @@
             "peak_directional_obi": 0.7635,
             "opposite_exec_qty": 15,
             "confidence": 0.9154
-          },
-          {
-            "alert_id": "SPF-0001",
-            "detector": "LAYERING",
-            "trader_id": "T008",
-            "account_id": "ACCT-T008",
-            "ip_address": "10.0.8.1",
-            "spoof_side": "SELL",
-            "exec_side": "BUY",
-            "start_ts_ms": 38805439,
-            "exec_ts_ms": 38813582,
-            "cancel_ts_ms": 38813954,
-            "spoof_levels_count": 4,
-            "spoof_total_qty": 528,
-            "spoof_canceled_qty": 528,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 372,
-            "peak_directional_obi": 0.6194,
-            "opposite_exec_qty": 94,
-            "confidence": 0.9178
           },
           {
             "alert_id": "WSH-0001",
@@ -1278,13 +1187,13 @@
         "traded_shares": 693757,
         "trader_hours": 325.0,
         "alerts_total_by_seed": [
+          0,
           3,
-          5,
           3
         ],
-        "alerts_per_trader_hour": 0.0113,
+        "alerts_per_trader_hour": 0.0062,
         "alerts_mean": {
-          "SPOOFING": 1.67,
+          "SPOOFING": 0.0,
           "LAYERING": 0.33,
           "WASH_TRADING": 1.0,
           "MARKING_THE_CLOSE": 0.0,
@@ -1294,70 +1203,9 @@
           "COLLUSIVE_WASH_RING_2HOP": 0.67,
           "COLLUSIVE_WASH_RING_3HOP": 0.33
         },
-        "flagged_share_of_trader_windows": 0.0038,
+        "flagged_share_of_trader_windows": 0.0026,
         "otr_flagged_share_of_trader_windows": 0.1426,
-        "examples": [
-          {
-            "alert_id": "SPF-0001",
-            "detector": "SPOOFING",
-            "trader_id": "T045",
-            "account_id": "ACCT-T045",
-            "ip_address": "10.0.45.1",
-            "spoof_side": "SELL",
-            "exec_side": "BUY",
-            "start_ts_ms": 34204636,
-            "exec_ts_ms": 34212141,
-            "cancel_ts_ms": 34212141,
-            "spoof_levels_count": 1,
-            "spoof_total_qty": 2300,
-            "spoof_canceled_qty": 2300,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 0,
-            "peak_directional_obi": 0.8869,
-            "opposite_exec_qty": 3,
-            "confidence": 0.93
-          },
-          {
-            "alert_id": "SPF-0002",
-            "detector": "SPOOFING",
-            "trader_id": "T007",
-            "account_id": "ACCT-T007",
-            "ip_address": "10.0.7.1",
-            "spoof_side": "SELL",
-            "exec_side": "BUY",
-            "start_ts_ms": 34212208,
-            "exec_ts_ms": 34212246,
-            "cancel_ts_ms": 34212246,
-            "spoof_levels_count": 1,
-            "spoof_total_qty": 578,
-            "spoof_canceled_qty": 578,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 0,
-            "peak_directional_obi": 0.7009,
-            "opposite_exec_qty": 100,
-            "confidence": 0.8904
-          },
-          {
-            "alert_id": "SPF-0001",
-            "detector": "SPOOFING",
-            "trader_id": "T014",
-            "account_id": "ACCT-T014",
-            "ip_address": "10.0.14.1",
-            "spoof_side": "SELL",
-            "exec_side": "BUY",
-            "start_ts_ms": 57018744,
-            "exec_ts_ms": 57018754,
-            "cancel_ts_ms": 57019157,
-            "spoof_levels_count": 1,
-            "spoof_total_qty": 597,
-            "spoof_canceled_qty": 597,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 403,
-            "peak_directional_obi": 0.5681,
-            "opposite_exec_qty": 100,
-            "confidence": 0.8372
-          }
-        ]
+        "examples": []
       },
       "200": {
         "messages": 147916,
@@ -1370,43 +1218,22 @@
         "traded_shares": 693757,
         "trader_hours": 1300.0,
         "alerts_total_by_seed": [
-          1,
+          0,
           1,
           1
         ],
-        "alerts_per_trader_hour": 0.0008,
+        "alerts_per_trader_hour": 0.0005,
         "alerts_mean": {
-          "SPOOFING": 0.33,
+          "SPOOFING": 0.0,
           "LAYERING": 0.0,
           "WASH_TRADING": 0.0,
           "MARKING_THE_CLOSE": 0.0,
           "FRONT_RUNNING": 0.67
         },
         "wash_by_type_mean": {},
-        "flagged_share_of_trader_windows": 0.0002,
+        "flagged_share_of_trader_windows": 0.0001,
         "otr_flagged_share_of_trader_windows": 0.2852,
-        "examples": [
-          {
-            "alert_id": "SPF-0001",
-            "detector": "SPOOFING",
-            "trader_id": "T180",
-            "account_id": "ACCT-T180",
-            "ip_address": "10.0.180.1",
-            "spoof_side": "SELL",
-            "exec_side": "BUY",
-            "start_ts_ms": 34204636,
-            "exec_ts_ms": 34212141,
-            "cancel_ts_ms": 34212141,
-            "spoof_levels_count": 1,
-            "spoof_total_qty": 2300,
-            "spoof_canceled_qty": 2300,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 0,
-            "peak_directional_obi": 0.8869,
-            "opposite_exec_qty": 3,
-            "confidence": 0.93
-          }
-        ]
+        "examples": []
       }
     },
     "INTC": {
@@ -1421,14 +1248,14 @@
         "traded_shares": 10388445,
         "trader_hours": 65.0,
         "alerts_total_by_seed": [
-          16,
-          16,
-          12
+          8,
+          6,
+          4
         ],
-        "alerts_per_trader_hour": 0.2257,
+        "alerts_per_trader_hour": 0.0923,
         "alerts_mean": {
-          "SPOOFING": 0.67,
-          "LAYERING": 8.33,
+          "SPOOFING": 0.0,
+          "LAYERING": 0.33,
           "WASH_TRADING": 1.0,
           "MARKING_THE_CLOSE": 0.0,
           "FRONT_RUNNING": 4.67
@@ -1437,48 +1264,50 @@
           "COLLUSIVE_WASH_RING_2HOP": 0.67,
           "COLLUSIVE_WASH_RING_3HOP": 0.33
         },
-        "flagged_share_of_trader_windows": 0.0538,
+        "flagged_share_of_trader_windows": 0.0269,
         "otr_flagged_share_of_trader_windows": 0.7397,
         "examples": [
           {
-            "alert_id": "SPF-0001",
-            "detector": "LAYERING",
-            "trader_id": "T006",
-            "account_id": "ACCT-T006",
-            "ip_address": "10.0.6.1",
-            "spoof_side": "SELL",
-            "exec_side": "BUY",
-            "start_ts_ms": 34263599,
-            "exec_ts_ms": 34267135,
-            "cancel_ts_ms": 34268194,
-            "spoof_levels_count": 2,
-            "spoof_total_qty": 7500,
-            "spoof_canceled_qty": 7500,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 1059,
-            "peak_directional_obi": 0.6248,
-            "opposite_exec_qty": 494,
-            "confidence": 0.8899
+            "alert_id": "FR-0001",
+            "detector": "FRONT_RUNNING",
+            "trader_id": "T007",
+            "account_id": "ACCT-T007",
+            "ip_address": "10.0.7.1",
+            "victim_trader_id": "T005",
+            "direction": "SELL",
+            "start_ts_ms": 34624550,
+            "end_ts_ms": 34653792,
+            "pre_accumulated_qty": 5200,
+            "block_sweep_qty": 2800,
+            "unwound_qty": 3368,
+            "unwind_ratio": 0.6477,
+            "avg_entry_price": 27.477,
+            "avg_exit_price": 27.4331,
+            "realized_edge_bps": 16.0,
+            "realized_pnl": 148.06,
+            "vpin_at_event": 0.8135,
+            "confidence": 0.9005
           },
           {
-            "alert_id": "SPF-0002",
-            "detector": "LAYERING",
-            "trader_id": "T006",
-            "account_id": "ACCT-T006",
-            "ip_address": "10.0.6.1",
-            "spoof_side": "BUY",
-            "exec_side": "SELL",
-            "start_ts_ms": 34341163,
-            "exec_ts_ms": 34349116,
-            "cancel_ts_ms": 34349211,
-            "spoof_levels_count": 3,
-            "spoof_total_qty": 3700,
-            "spoof_canceled_qty": 3700,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 95,
-            "peak_directional_obi": 0.7972,
-            "opposite_exec_qty": 700,
-            "confidence": 0.9889
+            "alert_id": "FR-0002",
+            "detector": "FRONT_RUNNING",
+            "trader_id": "T005",
+            "account_id": "ACCT-T005",
+            "ip_address": "10.0.5.1",
+            "victim_trader_id": "T004",
+            "direction": "SELL",
+            "start_ts_ms": 34626635,
+            "end_ts_ms": 34654312,
+            "pre_accumulated_qty": 4200,
+            "block_sweep_qty": 1400,
+            "unwound_qty": 4600,
+            "unwind_ratio": 1.0952,
+            "avg_entry_price": 27.46,
+            "avg_exit_price": 27.415,
+            "realized_edge_bps": 16.39,
+            "realized_pnl": 189.0,
+            "vpin_at_event": 0.9225,
+            "confidence": 0.9546
           },
           {
             "alert_id": "FR-0001",
@@ -1590,26 +1419,6 @@
             "realized_pnl": 87.78,
             "vpin_at_event": 1.0,
             "confidence": 0.8723
-          },
-          {
-            "alert_id": "SPF-0001",
-            "detector": "LAYERING",
-            "trader_id": "T003",
-            "account_id": "ACCT-T003",
-            "ip_address": "10.0.3.1",
-            "spoof_side": "BUY",
-            "exec_side": "SELL",
-            "start_ts_ms": 57000039,
-            "exec_ts_ms": 57005016,
-            "cancel_ts_ms": 57005530,
-            "spoof_levels_count": 4,
-            "spoof_total_qty": 23200,
-            "spoof_canceled_qty": 23200,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 514,
-            "peak_directional_obi": 0.5522,
-            "opposite_exec_qty": 3477,
-            "confidence": 0.8909
           }
         ]
       },
@@ -1625,19 +1434,19 @@
         "trader_hours": 325.0,
         "alerts_total_by_seed": [
           0,
-          2,
-          2
+          1,
+          0
         ],
-        "alerts_per_trader_hour": 0.0041,
+        "alerts_per_trader_hour": 0.001,
         "alerts_mean": {
-          "SPOOFING": 0.33,
-          "LAYERING": 0.67,
+          "SPOOFING": 0.0,
+          "LAYERING": 0.0,
           "WASH_TRADING": 0.0,
           "MARKING_THE_CLOSE": 0.0,
           "FRONT_RUNNING": 0.33
         },
         "wash_by_type_mean": {},
-        "flagged_share_of_trader_windows": 0.001,
+        "flagged_share_of_trader_windows": 0.0003,
         "otr_flagged_share_of_trader_windows": 0.6779,
         "examples": []
       },
@@ -1682,14 +1491,14 @@
         "traded_shares": 10778938,
         "trader_hours": 65.0,
         "alerts_total_by_seed": [
-          8,
-          18,
-          10
+          4,
+          10,
+          7
         ],
-        "alerts_per_trader_hour": 0.1846,
+        "alerts_per_trader_hour": 0.1077,
         "alerts_mean": {
-          "SPOOFING": 0.33,
-          "LAYERING": 4.67,
+          "SPOOFING": 0.0,
+          "LAYERING": 0.0,
           "WASH_TRADING": 1.67,
           "MARKING_THE_CLOSE": 0.0,
           "FRONT_RUNNING": 5.33
@@ -1697,48 +1506,50 @@
         "wash_by_type_mean": {
           "COLLUSIVE_WASH_RING_2HOP": 1.67
         },
-        "flagged_share_of_trader_windows": 0.0474,
+        "flagged_share_of_trader_windows": 0.032,
         "otr_flagged_share_of_trader_windows": 0.8013,
         "examples": [
           {
-            "alert_id": "SPF-0001",
-            "detector": "LAYERING",
-            "trader_id": "T009",
-            "account_id": "ACCT-T009",
-            "ip_address": "10.0.9.1",
-            "spoof_side": "BUY",
-            "exec_side": "SELL",
-            "start_ts_ms": 34493321,
-            "exec_ts_ms": 34495621,
-            "cancel_ts_ms": 34497027,
-            "spoof_levels_count": 2,
-            "spoof_total_qty": 3800,
-            "spoof_canceled_qty": 3800,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 1406,
-            "peak_directional_obi": 0.6623,
-            "opposite_exec_qty": 96,
-            "confidence": 0.9049
+            "alert_id": "FR-0001",
+            "detector": "FRONT_RUNNING",
+            "trader_id": "T002",
+            "account_id": "ACCT-T002",
+            "ip_address": "10.0.2.1",
+            "victim_trader_id": "T005",
+            "direction": "SELL",
+            "start_ts_ms": 34759455,
+            "end_ts_ms": 34785081,
+            "pre_accumulated_qty": 7416,
+            "block_sweep_qty": 3892,
+            "unwound_qty": 7201,
+            "unwind_ratio": 0.971,
+            "avg_entry_price": 30.9805,
+            "avg_exit_price": 30.9411,
+            "realized_edge_bps": 12.73,
+            "realized_pnl": 283.97,
+            "vpin_at_event": 0.974,
+            "confidence": 0.9381
           },
           {
-            "alert_id": "SPF-0002",
-            "detector": "LAYERING",
-            "trader_id": "T000",
-            "account_id": "ACCT-T000",
-            "ip_address": "10.0.0.1",
-            "spoof_side": "SELL",
-            "exec_side": "BUY",
-            "start_ts_ms": 34200325,
-            "exec_ts_ms": 34204411,
-            "cancel_ts_ms": 34206296,
-            "spoof_levels_count": 4,
-            "spoof_total_qty": 3700,
-            "spoof_canceled_qty": 3700,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 1885,
-            "peak_directional_obi": 0.6514,
-            "opposite_exec_qty": 8356,
-            "confidence": 0.9306
+            "alert_id": "FR-0002",
+            "detector": "FRONT_RUNNING",
+            "trader_id": "T005",
+            "account_id": "ACCT-T005",
+            "ip_address": "10.0.5.1",
+            "victim_trader_id": "T004",
+            "direction": "BUY",
+            "start_ts_ms": 34828901,
+            "end_ts_ms": 34848549,
+            "pre_accumulated_qty": 2900,
+            "block_sweep_qty": 3261,
+            "unwound_qty": 3244,
+            "unwind_ratio": 1.1186,
+            "avg_entry_price": 30.921,
+            "avg_exit_price": 30.9649,
+            "realized_edge_bps": 14.19,
+            "realized_pnl": 127.25,
+            "vpin_at_event": 0.935,
+            "confidence": 0.9473
           },
           {
             "alert_id": "FR-0001",
@@ -1781,46 +1592,6 @@
             "realized_pnl": 78.35,
             "vpin_at_event": 0.932,
             "confidence": 0.9498
-          },
-          {
-            "alert_id": "SPF-0001",
-            "detector": "LAYERING",
-            "trader_id": "T000",
-            "account_id": "ACCT-T000",
-            "ip_address": "10.0.0.1",
-            "spoof_side": "BUY",
-            "exec_side": "SELL",
-            "start_ts_ms": 57560172,
-            "exec_ts_ms": 57563306,
-            "cancel_ts_ms": 57565224,
-            "spoof_levels_count": 3,
-            "spoof_total_qty": 20100,
-            "spoof_canceled_qty": 20100,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 1918,
-            "peak_directional_obi": 0.5698,
-            "opposite_exec_qty": 2126,
-            "confidence": 0.8979
-          },
-          {
-            "alert_id": "SPF-0002",
-            "detector": "LAYERING",
-            "trader_id": "T009",
-            "account_id": "ACCT-T009",
-            "ip_address": "10.0.9.1",
-            "spoof_side": "BUY",
-            "exec_side": "SELL",
-            "start_ts_ms": 57555524,
-            "exec_ts_ms": 57564794,
-            "cancel_ts_ms": 57566694,
-            "spoof_levels_count": 3,
-            "spoof_total_qty": 8700,
-            "spoof_canceled_qty": 8700,
-            "spoof_cancel_ratio": 1.0,
-            "post_fill_cancel_delay_ms": 1900,
-            "peak_directional_obi": 0.5695,
-            "opposite_exec_qty": 19980,
-            "confidence": 0.8978
           }
         ]
       },
