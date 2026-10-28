@@ -67,3 +67,7 @@ The simulated sessions reuse six episode templates, so they show robustness to t
 - The code has not had an independent security review.
 
 See [SECURITY.md](SECURITY.md), [docs/threat-model.md](docs/threat-model.md) and [docs/model-card.md](docs/model-card.md).
+
+## License
+
+MIT. See [LICENSE](LICENSE).
