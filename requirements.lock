@@ -16,7 +16,7 @@ idna==3.20
     # via anyio
 numpy==2.5.4
     # via market-manipulation-surveillance (pyproject.toml)
-opentelemetry-api==1.45.1
+opentelemetry-api==1.45.2
     # via fastapi
 prometheus-client==0.26.0
     # via market-manipulation-surveillance (pyproject.toml)

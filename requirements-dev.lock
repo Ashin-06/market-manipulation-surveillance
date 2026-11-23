@@ -63,7 +63,7 @@ numpy==2.5.4
     # via
     #   market-manipulation-surveillance (pyproject.toml)
     #   pandas
-opentelemetry-api==1.45.1
+opentelemetry-api==1.45.2
     # via fastapi
 packageurl-python==0.17.6
     # via cyclonedx-python-lib
